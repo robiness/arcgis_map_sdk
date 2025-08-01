@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:am_sidekick/src/arcgis_map_project.dart';
 import 'package:am_sidekick/src/commands/clean_command.dart';
-import 'package:am_sidekick/src/commands/generate_arcgis_webpack.dart';
 import 'package:am_sidekick/src/commands/release/bump_version_command.dart';
 import 'package:am_sidekick/src/commands/release/edit_dependency_overrides_command.dart';
 import 'package:am_sidekick/src/commands/release/publish_command.dart';
@@ -30,8 +29,7 @@ Future<void> runAm(List<String> args) async {
     ..addCommand(PublishCommand())
     ..addCommand(EditDependencyOverridesCommand())
     ..addCommand(ReleaseCommand())
-    ..addCommand(TestCommand())
-    ..addCommand(GenerateArcgisWebpack());
+    ..addCommand(TestCommand());
 
   try {
     return await runner.run(args);

@@ -14,14 +14,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static void registerWith(Registrar registrar) {
     ArcgisMapPlatform.instance = ArcgisMapWeb();
 
-    //load webpack custom build of the ArcGIS JS API
-    final script = HTMLScriptElement()
-      ..src =
-          "assets/packages/arcgis_map_sdk_web/assets/arcgis_js_api_custom_build/main.js";
-
-    script.onLoad.listen((event) => _hasScriptLoaded.complete());
-    document.head!.append(script);
-
     final link = HTMLLinkElement()
       ..type = "text/css"
       ..href =

@@ -1,7 +1,6 @@
 .fvm/flutter_sdk
 .fvm/**
 pubspec.yaml.bak
-arcgis_webpack/node_modules
 
 # Miscellaneous
 *.class
