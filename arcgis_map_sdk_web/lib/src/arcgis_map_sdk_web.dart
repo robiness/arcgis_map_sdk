@@ -5,7 +5,6 @@ import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:js/js_util.dart';
 import 'package:web/web.dart';
 
 class ArcgisMapWeb extends ArcgisMapPlatform {

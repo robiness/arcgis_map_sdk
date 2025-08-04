@@ -12,7 +12,6 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:js/js_util.dart';
 import 'package:web/web.dart';
 
 class ArcgisMapWebController {

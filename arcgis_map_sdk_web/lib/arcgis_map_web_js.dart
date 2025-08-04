@@ -1,8 +1,6 @@
 @JS()
 import 'dart:async';
 
-import 'package:js/js.dart';
-import 'package:js/js_util.dart';
 import 'package:web/web.dart';
 
 export 'package:arcgis_map_sdk_web/src/arcgis_map_sdk_web.dart';

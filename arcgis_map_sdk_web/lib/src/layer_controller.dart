@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:js_interop';
 import 'dart:math' as math;
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
@@ -11,7 +12,6 @@ import 'package:async/async.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:js/js_util.dart';
 import 'package:web/web.dart';
 
 enum HoveredState { hovered, notHovered }
@@ -76,7 +76,7 @@ class LayerController {
     // Create a layer from a backend service
     if (url != null) {
       sceneLayer = JsSceneLayer(
-        jsify({
+        {
           'id': layerId,
           "url": url,
           "renderer": {
@@ -89,7 +89,7 @@ class LayerController {
             'expression': '0',
             'unit': "meters",
           },
-        }),
+        }.jsify(),
       );
     } else {
       throw Exception("No url provided");
@@ -118,7 +118,7 @@ class LayerController {
     // Create a layer from a backend service
     if (url != null) {
       featureLayer = JsFeatureLayer(
-        jsify({"url": url}),
+        {"url": url}.jsify(),
       );
     } else {
       // Checks if a feature layer with the layerId is already in use
@@ -127,7 +127,7 @@ class LayerController {
           .toList(growable: false)
           .contains(layerId)) {
         featureLayer = JsFeatureLayer(
-          jsify({
+          {
             'id': layerId,
             "source": data?.map((Graphic graphic) => graphic.toJson()),
             "title": 'First layer',
@@ -139,7 +139,7 @@ class LayerController {
             },
             "outFields": ["*"],
             // "featureReduction": options.featureReduction,
-          }),
+          }.jsify(),
         );
       } else {
         throw Exception(
@@ -187,7 +187,7 @@ class LayerController {
         .toList(growable: false)
         .contains(layerId)) {
       graphicsLayer = JsGraphicsLayer(
-        jsify({
+        {
           'id': layerId,
           "title": 'GraphicLayer',
           "elevationInfo": {
@@ -197,7 +197,7 @@ class LayerController {
             'unit': "meters",
           },
           "outFields": ["*"],
-        }),
+        }.jsify(),
       );
     } else {
       throw Exception(
@@ -279,10 +279,10 @@ class LayerController {
   bool _isPointInPolygon(JsGraphic polygon, LatLng pointCoordinates) {
     return polygon.geometry.extent.contains(
       JsPoint(
-        jsify({
+        {
           'latitude': pointCoordinates.latitude,
           'longitude': pointCoordinates.longitude,
-        }),
+        }.jsify(),
       ),
     );
   }
@@ -689,7 +689,7 @@ class LayerController {
         }),
       );
 
-      if (graphic != null) graphic.set('symbol', jsify(symbol.toJson()));
+      if (graphic != null) graphic.set('symbol', symbol.toJson().jsify());
     } else {
       throw Exception('GraphicsLayer with the id:$layerId not found');
     }
@@ -794,10 +794,10 @@ class LayerController {
     if (layer is JsFeatureLayer) {
       await layer
           .applyEdits(
-            jsify({
+            {
               "deleteFeatures": features,
               "addFeatures": data.map((Graphic graphic) => graphic.toJson()),
-            }),
+            }.jsify(),
           )
           .toFuture();
     } else {
@@ -809,12 +809,12 @@ class LayerController {
   ///
   /// This is particularly useful when the map is partially overlayed by other UI elements.
   void addViewPadding({required JsView view, required ViewPadding padding}) {
-    view.padding = jsify({
+    view.padding = {
       "left": padding.left,
       "top": padding.top,
       "right": padding.right,
       "bottom": padding.bottom,
-    });
+    }.jsify();
   }
 
   bool _isZoomInBounds(double zoom) {
@@ -841,13 +841,13 @@ class LayerController {
     }
 
     final extentMap = JsExtent(
-      jsify({
+      {
         'xmin': minLon,
         'ymin': minLat,
         'xmax': maxLon,
         'ymax': maxLat,
         'spatialReference': {'wkid': 4326},
-      }),
+      }.jsify(),
     );
 
     final target = {
@@ -862,7 +862,7 @@ class LayerController {
       });
     }
 
-    await view.goTo(jsify(target), jsify(targetOptions)).toFuture();
+    await view.goTo(target.jsify(), targetOptions.jsify()).toFuture();
   }
 
   /// Go to the given point and zoom if wanted
@@ -873,7 +873,7 @@ class LayerController {
     AnimationOptions? animationOptions,
   }) async {
     final jsPoint = JsPoint(
-      jsify({'latitude': point.latitude, 'longitude': point.longitude}),
+      {'latitude': point.latitude, 'longitude': point.longitude}.jsify(),
     );
 
     final Map target = {'target': jsPoint};
@@ -898,7 +898,7 @@ class LayerController {
       });
     }
 
-    await view.goTo(jsify(target), jsify(targetOptions)).toFuture();
+    await view.goTo(target.jsify(), targetOptions.jsify()).toFuture();
   }
 
   /// Zoom in by a Level Of Detail Factor
@@ -920,7 +920,12 @@ class LayerController {
         });
       }
 
-      view.goTo(jsify({'zoom': newZoomLevel}), jsify(targetOptions)).toFuture();
+      view
+          .goTo(
+            {'zoom': newZoomLevel}.jsify(),
+            targetOptions.jsify(),
+          )
+          .toFuture();
       return true;
     } else {
       throw Exception(
@@ -948,7 +953,9 @@ class LayerController {
           'easing': animationOptions.animationCurve.value,
         });
       }
-      view.goTo(jsify({'zoom': newZoomLevel}), jsify(targetOptions)).toFuture();
+      view
+          .goTo({'zoom': newZoomLevel}.jsify(), targetOptions.jsify())
+          .toFuture();
       return true;
     } else {
       throw Exception(
@@ -964,7 +971,7 @@ class LayerController {
     if (layer is JsGraphicsLayer) {
       final String graphicId = graphic.getAttributesId();
       if (!_graphicObjectIds.contains(graphicId)) {
-        layer.graphics?.add(jsify(graphic.toJson()));
+        layer.graphics?.add(graphic.toJson().jsify());
         _graphicObjectIds.add(graphicId);
       } else {
         throw Exception(
@@ -1010,9 +1017,9 @@ class LayerController {
               final JsHitTestResult hitTestResult = await view
                   .hitTest(
                     event,
-                    jsify({
+                    {
                       'include': graphicsLayers,
-                    }),
+                    }.jsify(),
                   )
                   .toFuture();
 
@@ -1201,9 +1208,9 @@ class LayerController {
     bool? showLabelsBeneathGraphics,
   }) async {
     final basemapToggle = BasemapToggle(
-      jsify({
-        "viewModel": jsify({"view": view, "nextBasemap": baseMap.value}),
-      }),
+      {
+        "viewModel": {"view": view, "nextBasemap": baseMap.value}.jsify(),
+      }.jsify(),
     );
 
     // The toggle action is initiated here, but we don't need to await it directly.
