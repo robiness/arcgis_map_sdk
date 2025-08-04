@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:ui_web';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
@@ -89,10 +91,19 @@ class ArcgisMapWebController {
   }
 
   Future<void> _createMap() async {
-    final esri = getProperty<Object>(globalThis, 'esri');
-    final core = getProperty<Object>(esri, 'core');
-    final config = getProperty<Object>(core, 'config');
-    setProperty(config, 'apiKey', _mapOptions.apiKey);
+// 1. Get the global 'esri' object.
+    final esri = globalContext.getProperty('esri'.toJS);
+
+// 2. Safely access the 'config' object and set the property.
+    if (esri != null && (esri as JSObject).hasProperty('config'.toJS).toDart) {
+      final config = esri.getProperty('config'.toJS);
+
+      // 3. Set the 'apiKey' property on the config object.
+      (config! as JSObject).setProperty(
+        'apiKey'.toJS,
+        _mapOptions.apiKey?.toJS, // Convert the Dart String to a JSString
+      );
+    }
 
     if (_mapOptions.mapStyle == MapStyle.threeD) {
       _sceneView = _createJsSceneView();
@@ -166,6 +177,10 @@ class ArcgisMapWebController {
     _streamController.close();
   }
 
+  // Assume loadFeatureLayer() is defined to return a JSPromise from JS.
+  external JSPromise loadFeatureLayer();
+
+// Assume other types like FeatureLayer, FeatureLayerOptions, etc., are defined.
   Future<FeatureLayer> addFeatureLayer(
     FeatureLayerOptions options,
     List<Graphic>? data,
@@ -174,9 +189,13 @@ class ArcgisMapWebController {
     void Function(double)? getZoom,
     String layerId,
   ) async {
-    if (getProperty(globalThis, "FeatureLayer") == null) {
-      await promiseToFuture(loadFeatureLayer());
+    // Check if the FeatureLayer module is loaded on the page.
+    if (!globalContext.hasProperty('FeatureLayer'.toJS).toDart) {
+      // If not, call the loader function and await the promise using .toFuture.
+      await loadFeatureLayer().toDart;
     }
+
+    // This part calls your own Dart code and remains the same.
     return _layerController!.createFeatureLayer(
       options,
       data,

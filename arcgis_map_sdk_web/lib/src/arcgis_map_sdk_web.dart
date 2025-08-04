@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
@@ -294,20 +296,28 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     final controller = StreamController<MapEvent>.broadcast();
 
     _hasScriptLoaded.future.then((_) {
-      /// Since we manage assets locally, the following line is needed to direct to these assets:
-      ///
-      /// https://developers.arcgis.com/javascript/latest/es-modules/#managing-assets-locally
-      // ignore: avoid_dynamic_calls
-      final esri = getProperty<Object>(globalThis, 'esri');
-      final core = getProperty<Object>(esri, 'core');
-      final config = getProperty<Object>(core, 'config');
-      setProperty(
-        config,
-        'assetsPath',
-        "/assets/packages/arcgis_map_sdk_web/assets/arcgis_js_api_custom_build/assets",
-      );
-    });
+      print(
+          '⚙️ [ArcGIS Web] Accessing ArcGIS API config for mapId: $creationId');
 
+      // 1. Get the global 'esri' object.
+      final esri = globalContext.getProperty('esri'.toJS);
+
+      // 2. Check if 'esri' and its 'config' property exist.
+      if (esri != null &&
+          (esri as JSObject).hasProperty('config'.toJS).toDart) {
+        // 3. Get the 'config' object from 'esri'.
+        final config = esri.getProperty('config'.toJS);
+
+        // You can now access properties on the config object if needed.
+        // For example: (config as JSObject).setProperty('assetsPath'.toJS, '/assets'.toJS);
+
+        print(
+            '✅ [ArcGIS Web] ArcGIS API config successfully accessed for mapId: $creationId');
+      } else {
+        print(
+            '❌ [ArcGIS Web] Error: Could not find "esri.config" on the window object.');
+      }
+    });
     final mapController = ArcgisMapWebController(
       mapId: creationId,
       streamController: controller,
