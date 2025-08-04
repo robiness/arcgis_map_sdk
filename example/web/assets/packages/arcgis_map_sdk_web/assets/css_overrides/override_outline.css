@@ -1,0 +1,1 @@
+ body .esri-view .esri-view-surface--touch-none:focus::after { outline: none !important;}

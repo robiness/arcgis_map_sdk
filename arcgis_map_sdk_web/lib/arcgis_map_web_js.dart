@@ -10,7 +10,7 @@ export 'package:arcgis_map_sdk_web/src/arcgis_map_sdk_web.dart';
 @JS("JSON.stringify")
 external dynamic jsonStringify(dynamic value);
 
-@JS("esri.core.geometry.Point")
+@JS("esri.geometry.Point")
 class JsPoint {
   external double get latitude;
 
@@ -23,7 +23,7 @@ class JsPoint {
 external Object loadFeatureLayer();
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-Layer.html
-@JS("esri.core.layers.Layer")
+@JS("esri.layers.Layer")
 class JsLayer extends Accessor {
   external String id;
 
@@ -51,7 +51,7 @@ class JsFeatureLayer {
   external String get id;
 }
 
-@JS("esri.core.layers.GraphicsLayer")
+@JS("esri.layers.GraphicsLayer")
 class JsGraphicsLayer extends Accessor {
   external factory JsGraphicsLayer(dynamic map);
 
@@ -75,7 +75,7 @@ class JsGraphicsLayer extends Accessor {
 }
 
 /// https://developers.arcgis.com/javascript/latest/sample-code/layers-scenelayer/
-@JS("esri.core.layers.SceneLayer")
+@JS("esri.layers.SceneLayer")
 class JsSceneLayer extends Accessor {
   external factory JsSceneLayer(dynamic map);
 
@@ -100,7 +100,7 @@ abstract class DefaultUI {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Attribution.html
-@JS("esri.core.widgets.Attribution")
+@JS("esri.widgets.Attribution")
 class JsAttribution extends Accessor {
   external factory JsAttribution(dynamic map);
 
@@ -110,7 +110,7 @@ class JsAttribution extends Accessor {
   external String get attributionText;
 }
 
-@JS("esri.core.Map")
+@JS("esri.Map")
 class JsEsriMap {
   external factory JsEsriMap(dynamic map);
 
@@ -128,13 +128,13 @@ class JsEsriMap {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-VectorTileLayer.html
-@JS("esri.core.layers.VectorTileLayer")
+@JS("esri.layers.VectorTileLayer")
 class JsVectorTileLayer extends JsLayer {
   external factory JsVectorTileLayer(dynamic map);
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-Basemap.html
-@JS("esri.core.Basemap")
+@JS("esri.Basemap")
 class JsBaseMap extends Accessor {
   external factory JsBaseMap(dynamic basemap);
 
@@ -143,7 +143,7 @@ class JsBaseMap extends Accessor {
   external bool get loaded;
 }
 
-@JS("esri.core.Collection")
+@JS("esri.Collection")
 class Collection<T> {
   external int get length;
 
@@ -188,7 +188,7 @@ abstract class JsAttributes {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Extent.html
-@JS("esri.core.geometry.Extent")
+@JS("esri.geometry.Extent")
 abstract class JsExtent {
   /// https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Extent.html#contains
   external bool contains(dynamic geometry);
@@ -208,7 +208,7 @@ abstract class JsExtent {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html
-@JS("esri.core.views.View")
+@JS("esri.views.View")
 class JsView extends Accessor {
   /// https://developers.arcgis.com/javascript/latest/api-reference/esri-views-View.html#type
   external String get type;
@@ -241,7 +241,7 @@ class JsView extends Accessor {
   external JsExtent get extent;
 }
 
-@JS("esri.core.views.MapView")
+@JS("esri.views.MapView")
 class JsMapView extends Accessor {
   external factory JsMapView(dynamic map);
 
@@ -279,7 +279,7 @@ class JsMapView extends Accessor {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-views-SceneView.html
-@JS("esri.core.views.SceneView")
+@JS("esri.views.SceneView")
 class JsSceneView extends Accessor {
   external factory JsSceneView(dynamic map);
 
@@ -317,7 +317,7 @@ class JsSceneView extends Accessor {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-Viewpoint.html
-@JS("esri.core.Viewpoint")
+@JS("esri.Viewpoint")
 class JsViewpoint {
   external factory JsViewpoint(dynamic map);
 
@@ -331,7 +331,7 @@ class JsViewpoint {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-Camera.html
-@JS("esri.core.Camera")
+@JS("esri.Camera")
 class JsCamera {
   external factory JsCamera(dynamic map);
 
@@ -343,7 +343,7 @@ class JsCamera {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-BasemapToggle.html
-@JS("esri.core.widgets.BasemapToggle")
+@JS("esri.widgets.BasemapToggle")
 class BasemapToggle extends Accessor {
   external factory BasemapToggle(dynamic map);
 
@@ -354,7 +354,7 @@ class BasemapToggle extends Accessor {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-ElevationProfile.html
-@JS("esri.core.widgets.ElevationProfile")
+@JS("esri.widgets.ElevationProfile")
 class JsElevationProfile {
   external factory JsElevationProfile(dynamic properties);
 
@@ -369,7 +369,7 @@ extension PromiseExtension<T> on Promise<T> {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html
-@JS("esri.core.Accessor")
+@JS("esri.Accessor")
 class Accessor {
   /// https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html#get
   external dynamic get(String path);
@@ -433,6 +433,6 @@ extension WebglLoseContextExtension on WebglLoseContext {
 }
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-core-reactiveUtils.html#watch
-@JS('esri.core.reactiveUtils.watch')
+@JS('esri.reactiveUtils.watch')
 external WatchHandle watch(Function getValue, Function callback,
     [dynamic options]);

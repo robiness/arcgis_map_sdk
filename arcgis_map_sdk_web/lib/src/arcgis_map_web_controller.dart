@@ -56,9 +56,18 @@ class ArcgisMapWebController {
   /// The Flutter widget that will contain the rendered Map. Used for caching.
   Widget? get widget {
     if (_widget == null && !_streamController.isClosed) {
+      final viewType = _getViewType(_mapId);
+      print(
+          '🎨 [MapController] Creating HtmlElementView with viewType: $viewType');
       _widget = HtmlElementView(
-        viewType: _getViewType(_mapId),
+        viewType: viewType,
       );
+      print('✅ [MapController] HtmlElementView created for mapId: $_mapId');
+    } else if (_widget != null) {
+      print('♻️ [MapController] Returning cached widget for mapId: $_mapId');
+    } else {
+      print(
+          '⚠️ [MapController] StreamController is closed, cannot create widget for mapId: $_mapId');
     }
     return _widget;
   }
@@ -77,40 +86,79 @@ class ArcgisMapWebController {
   })  : _mapId = mapId,
         _streamController = streamController,
         _mapOptions = mapOptions {
+    print('🎛️ [MapController] Creating controller for mapId: $_mapId');
+    print('📐 [MapController] Map options: ${_mapOptions.toString()}');
+
     final PlatformViewRegistry platformViewRegistry = PlatformViewRegistry();
+    final viewType = _getViewType(_mapId);
+    print('🏷️ [MapController] Registering view factory with type: $viewType');
+
     // ignore: avoid_dynamic_calls
     platformViewRegistry.registerViewFactory(
-      _getViewType(_mapId),
-      (int viewId) => _div,
+      viewType,
+      (int viewId) {
+        print(
+            '🏭 [MapController] View factory called for viewId: $viewId, returning div with id: ${_div.id}');
+        return _div;
+      },
     );
+    print('✅ [MapController] Platform view registered successfully');
   }
 
   void init() {
+    print('🚀 [MapController] init() called for mapId: $_mapId');
     _createMap();
   }
 
   Future<void> _createMap() async {
-    final esri = getProperty<Object>(globalThis, 'esri');
-    final core = getProperty<Object>(esri, 'core');
-    final config = getProperty<Object>(core, 'config');
-    setProperty(config, 'apiKey', _mapOptions.apiKey);
+    print('🗺️ [MapController] _createMap() starting for mapId: $_mapId');
 
-    if (_mapOptions.mapStyle == MapStyle.threeD) {
-      _sceneView = _createJsSceneView();
-      _sceneView!.container = _div;
-      _activeView = _sceneView! as JsView;
-    } else {
-      _mapView = _createJsMapView();
-      _mapView!.container = _div;
-      _activeView = _mapView! as JsView;
+    try {
+      final esri = getProperty<Object?>(globalThis, 'esri');
+      print('🔧 [MapController] Got esri object: ${esri != null}');
+
+      final config = getProperty<Object?>(esri!, 'config');
+      print('🔧 [MapController] Got esri.config object: ${config != null}');
+
+      setProperty(config!, 'apiKey', _mapOptions.apiKey);
+      print('🔑 [MapController] Set API key: ${_mapOptions.apiKey}');
+
+      print('🎯 [MapController] Map style: ${_mapOptions.mapStyle}');
+
+      if (_mapOptions.mapStyle == MapStyle.threeD) {
+        print('🌍 [MapController] Creating 3D SceneView...');
+        _sceneView = _createJsSceneView();
+        print('✅ [MapController] SceneView created');
+
+        _sceneView!.container = _div;
+        print('📦 [MapController] SceneView attached to div: ${_div.id}');
+
+        _activeView = _sceneView! as JsView;
+        print('✅ [MapController] Active view set to SceneView');
+      } else {
+        print('🗺️ [MapController] Creating 2D MapView...');
+        _mapView = _createJsMapView();
+        print('✅ [MapController] MapView created');
+
+        _mapView!.container = _div;
+        print('📦 [MapController] MapView attached to div: ${_div.id}');
+
+        _activeView = _mapView! as JsView;
+        print('✅ [MapController] Active view set to MapView');
+      }
+    } catch (e, stack) {
+      print('❌ [MapController] Error in _createMap: $e');
+      print('❌ [MapController] Stack trace: $stack');
+      rethrow;
     }
 
     // Notifies the controller that the map is ready to be used and [moveBaseMapLabelsToBackground]
-    // can be called.
+    // can be called. Updated to use current ArcGIS API reactiveUtils.watch signature.
     watch(
       allowInterop(() => _map!.basemap.loaded),
-      allowInterop((loaded, _) {
-        if (loaded as bool && !_baseMapLoaded.isCompleted) {
+      allowInterop((newValue, oldValue) {
+        final loaded = newValue as bool;
+        if (loaded && !_baseMapLoaded.isCompleted) {
           _baseMapLoaded.complete(true);
         }
       }),

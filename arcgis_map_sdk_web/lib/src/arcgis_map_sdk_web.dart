@@ -21,6 +21,49 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       ..rel = "stylesheet";
 
     document.head!.append(link);
+    
+    // Check for ArcGIS API availability and complete the script loading
+    _checkArcGISAvailability();
+  }
+  
+  static void _checkArcGISAvailability() {
+    print('🔍 [ArcGIS Web] Checking for ArcGIS API availability...');
+    
+    // Check if esri is already available
+    if (hasProperty(globalThis, 'esri')) {
+      print('✅ [ArcGIS Web] ArcGIS API already available!');
+      if (!_hasScriptLoaded.isCompleted) {
+        _hasScriptLoaded.complete();
+        print('✅ [ArcGIS Web] Script loading Completer completed');
+      }
+      return;
+    }
+    
+    print('⏳ [ArcGIS Web] ArcGIS API not yet available, polling...');
+    
+    // Poll for esri availability with timeout
+    int attempts = 0;
+    const maxAttempts = 300; // 30 seconds timeout
+    Timer.periodic(Duration(milliseconds: 100), (timer) {
+      attempts++;
+      
+      if (hasProperty(globalThis, 'esri')) {
+        print('✅ [ArcGIS Web] ArcGIS API loaded after polling! (attempt $attempts)');
+        timer.cancel();
+        if (!_hasScriptLoaded.isCompleted) {
+          _hasScriptLoaded.complete();
+          print('✅ [ArcGIS Web] Script loading Completer completed');
+        }
+      } else if (attempts >= maxAttempts) {
+        print('❌ [ArcGIS Web] Timeout waiting for ArcGIS API after $attempts attempts');
+        timer.cancel();
+        if (!_hasScriptLoaded.isCompleted) {
+          _hasScriptLoaded.completeError('ArcGIS API failed to load within 30 seconds');
+        }
+      } else if (attempts % 50 == 0) {
+        print('⏳ [ArcGIS Web] Still polling for ArcGIS API... (attempt $attempts/$maxAttempts)');
+      }
+    });
   }
 
   final Map<int, ArcgisMapWebController> _mapById = {};
@@ -52,8 +95,12 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Future<void> init(int mapId) async {
+    print('🚀 [ArcGIS Web] init() called for mapId: $mapId');
+    print('⏳ [ArcGIS Web] Waiting for script loading...');
     await _hasScriptLoaded.future;
+    print('✅ [ArcGIS Web] Script loaded, initializing map controller...');
     _map(mapId).init();
+    print('✅ [ArcGIS Web] Map controller init() called');
   }
 
   @override
@@ -278,27 +325,28 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     required PlatformViewCreatedCallback onPlatformViewCreated,
     required ArcgisMapOptions mapOptions,
   }) {
+    print('🏗️ [ArcGIS Web] buildView() called for mapId: $creationId');
+    
     // Bail fast if we've already rendered this map ID...
     final widget = _mapById[creationId]?.widget;
     if (widget != null) {
+      print('♻️ [ArcGIS Web] Returning existing widget for mapId: $creationId');
       return widget;
     }
 
+    print('🎯 [ArcGIS Web] Creating new map controller for mapId: $creationId');
     final controller = StreamController<MapEvent>.broadcast();
 
     _hasScriptLoaded.future.then((_) {
-      /// Since we manage assets locally, the following line is needed to direct to these assets:
-      ///
-      /// https://developers.arcgis.com/javascript/latest/es-modules/#managing-assets-locally
+      print('⚙️ [ArcGIS Web] Configuring ArcGIS API settings for mapId: $creationId');
+      /// Configure ArcGIS API to use CDN assets instead of local build
+      /// Since we're using CDN, we don't need to set assetsPath
       // ignore: avoid_dynamic_calls
       final esri = getProperty<Object>(globalThis, 'esri');
       final core = getProperty<Object>(esri, 'core');
       final config = getProperty<Object>(core, 'config');
-      setProperty(
-        config,
-        'assetsPath',
-        "/assets/packages/arcgis_map_sdk_web/assets/arcgis_js_api_custom_build/assets",
-      );
+      // CDN automatically handles asset paths, so we don't set assetsPath
+      print('✅ [ArcGIS Web] ArcGIS API configuration completed for mapId: $creationId');
     });
 
     final mapController = ArcgisMapWebController(
@@ -308,9 +356,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     );
 
     _mapById[creationId] = mapController;
+    print('📦 [ArcGIS Web] Map controller stored for mapId: $creationId');
 
     onPlatformViewCreated.call(creationId);
+    print('📞 [ArcGIS Web] onPlatformViewCreated callback called for mapId: $creationId');
 
-    return mapController.widget!;
+    final resultWidget = mapController.widget!;
+    print('🎨 [ArcGIS Web] Widget created and returning for mapId: $creationId');
+    return resultWidget;
   }
 }
