@@ -1,11 +1,12 @@
 import 'dart:async';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:js/js_util.dart';
 import 'package:web/web.dart';
 
 class ArcgisMapWeb extends ArcgisMapPlatform {
@@ -21,16 +22,16 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       ..rel = "stylesheet";
 
     document.head!.append(link);
-    
+
     // Check for ArcGIS API availability and complete the script loading
     _checkArcGISAvailability();
   }
-  
+
   static void _checkArcGISAvailability() {
     print('🔍 [ArcGIS Web] Checking for ArcGIS API availability...');
-    
+
     // Check if esri is already available
-    if (hasProperty(globalThis, 'esri')) {
+    if (globalContext.hasProperty('esri'.toJS).toDart) {
       print('✅ [ArcGIS Web] ArcGIS API already available!');
       if (!_hasScriptLoaded.isCompleted) {
         _hasScriptLoaded.complete();
@@ -38,30 +39,34 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
       return;
     }
-    
+
     print('⏳ [ArcGIS Web] ArcGIS API not yet available, polling...');
-    
+
     // Poll for esri availability with timeout
     int attempts = 0;
     const maxAttempts = 300; // 30 seconds timeout
     Timer.periodic(Duration(milliseconds: 100), (timer) {
       attempts++;
-      
-      if (hasProperty(globalThis, 'esri')) {
-        print('✅ [ArcGIS Web] ArcGIS API loaded after polling! (attempt $attempts)');
+
+      if (globalContext.hasProperty('esri'.toJS).toDart) {
+        print(
+            '✅ [ArcGIS Web] ArcGIS API loaded after polling! (attempt $attempts)');
         timer.cancel();
         if (!_hasScriptLoaded.isCompleted) {
           _hasScriptLoaded.complete();
           print('✅ [ArcGIS Web] Script loading Completer completed');
         }
       } else if (attempts >= maxAttempts) {
-        print('❌ [ArcGIS Web] Timeout waiting for ArcGIS API after $attempts attempts');
+        print(
+            '❌ [ArcGIS Web] Timeout waiting for ArcGIS API after $attempts attempts');
         timer.cancel();
         if (!_hasScriptLoaded.isCompleted) {
-          _hasScriptLoaded.completeError('ArcGIS API failed to load within 30 seconds');
+          _hasScriptLoaded
+              .completeError('ArcGIS API failed to load within 30 seconds');
         }
       } else if (attempts % 50 == 0) {
-        print('⏳ [ArcGIS Web] Still polling for ArcGIS API... (attempt $attempts/$maxAttempts)');
+        print(
+            '⏳ [ArcGIS Web] Still polling for ArcGIS API... (attempt $attempts/$maxAttempts)');
       }
     });
   }
@@ -326,7 +331,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     required ArcgisMapOptions mapOptions,
   }) {
     print('🏗️ [ArcGIS Web] buildView() called for mapId: $creationId');
-    
+
     // Bail fast if we've already rendered this map ID...
     final widget = _mapById[creationId]?.widget;
     if (widget != null) {
@@ -338,15 +343,18 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     final controller = StreamController<MapEvent>.broadcast();
 
     _hasScriptLoaded.future.then((_) {
-      print('⚙️ [ArcGIS Web] Configuring ArcGIS API settings for mapId: $creationId');
+      print(
+          '⚙️ [ArcGIS Web] Configuring ArcGIS API settings for mapId: $creationId');
+
       /// Configure ArcGIS API to use CDN assets instead of local build
       /// Since we're using CDN, we don't need to set assetsPath
       // ignore: avoid_dynamic_calls
-      final esri = getProperty<Object>(globalThis, 'esri');
-      final core = getProperty<Object>(esri, 'core');
-      final config = getProperty<Object>(core, 'config');
+      final esri = globalContext.getProperty('esri'.toJS);
+      final core = esri!.getProperty('config'.toJS);
+      final config = core.getProperty('config'.toJS);
       // CDN automatically handles asset paths, so we don't set assetsPath
-      print('✅ [ArcGIS Web] ArcGIS API configuration completed for mapId: $creationId');
+      print(
+          '✅ [ArcGIS Web] ArcGIS API configuration completed for mapId: $creationId');
     });
 
     final mapController = ArcgisMapWebController(
@@ -359,10 +367,12 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     print('📦 [ArcGIS Web] Map controller stored for mapId: $creationId');
 
     onPlatformViewCreated.call(creationId);
-    print('📞 [ArcGIS Web] onPlatformViewCreated callback called for mapId: $creationId');
+    print(
+        '📞 [ArcGIS Web] onPlatformViewCreated callback called for mapId: $creationId');
 
     final resultWidget = mapController.widget!;
-    print('🎨 [ArcGIS Web] Widget created and returning for mapId: $creationId');
+    print(
+        '🎨 [ArcGIS Web] Widget created and returning for mapId: $creationId');
     return resultWidget;
   }
 }

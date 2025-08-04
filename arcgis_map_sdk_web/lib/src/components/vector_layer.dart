@@ -1,5 +1,5 @@
 import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
-import 'package:js/js_util.dart';
+import 'dart:js_interop';
 
 class VectorLayer {
   JsVectorTileLayer init({
@@ -12,6 +12,6 @@ class VectorLayer {
       input['apiKey'] = apiKey;
     }
 
-    return JsVectorTileLayer(jsify(input));
+    return JsVectorTileLayer(input.jsify());
   }
 }
