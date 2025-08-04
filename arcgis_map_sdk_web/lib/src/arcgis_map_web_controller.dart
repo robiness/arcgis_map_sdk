@@ -115,15 +115,19 @@ class ArcgisMapWebController {
       _activeView = _mapView! as JsView;
     }
 
-    // Notifies the controller that the map is ready to be used and [moveBaseMapLabelsToBackground]
-    // can be called.
+    // Assuming 'watch' is a DART function that takes two DART functions as arguments.
     watch(
-      allowInterop(() => _map!.basemap.loaded),
-      allowInterop((loaded, _) {
+      // Pass the raw Dart function directly, without .toJS
+      () => _map!.basemap.loaded,
+
+      // Pass the raw Dart callback directly, without .toJS
+      (loaded, _) {
+        // The type of 'loaded' here is what your Dart 'watch' function provides
+        // to its callback. Your original 'as bool' cast is likely correct in this context.
         if (loaded as bool && !_baseMapLoaded.isCompleted) {
           _baseMapLoaded.complete(true);
         }
-      }),
+      },
     );
 
     _createDefaultViews(_activeView!);
@@ -268,36 +272,44 @@ class ArcgisMapWebController {
 
   /// TODO Also call this method on hot restart
 
-  /// This method is called when the view switches between 2d and 3d. It will destroy the webgl context and
-  /// reinitialize the map. This way, the persistent error of too many webgl contexts is avoided.
+  /// This method is called when the view switches between 2d and 3d.
   void _destroyWebglContext() {
     final canvasElement = window.document.querySelector(
       '#plugins\\.flutter\\.io\\/arcgis_$_mapId > div > div > canvas',
-    );
-    // "webgl" (or "experimental-webgl") which will create a WebGLRenderingContext object representing a
-    // three-dimensional rendering context. This context is only available on browsers that implement WebGL version 1 (OpenGL ES 2.0).
-    final webgl = (canvasElement as HTMLCanvasElement?)?.getContext('webgl');
-    // "webgl2" which will create a WebGL2RenderingContext object representing a three-dimensional rendering context.
-    // This context is only available on browsers that implement WebGL version 2 (OpenGL ES 3.0)
-    final webgl2 = canvasElement?.getContext('webgl2');
+    ) as HTMLCanvasElement?;
 
-    if (webgl != null) {
-      (webgl as WebGLRenderingContext)
-          .getCustomExtension('WEBGL_lose_context')
-          ?.loseContext();
-      webgl.getCustomExtension('WEBGL_lose_context')?.restoreContext();
+    if (canvasElement == null) {
+      return;
     }
 
+    // --- WebGL 1 Handling ---
+    final webgl = canvasElement.getContext('webgl');
+    if (webgl != null) {
+      final loseContextJsObject = webgl.callMethod(
+        'getExtension'.toJS,
+        'WEBGL_lose_context'.toJS,
+      ) as JSObject?;
+
+      if (loseContextJsObject != null) {
+        // This call is now VALID because LoseContext has a public, unnamed constructor.
+        final loseContextExt = LoseContext(loseContextJsObject);
+        loseContextExt.loseContext();
+        loseContextExt.restoreContext();
+      }
+    }
+
+    // --- WebGL 2 Handling ---
+    final webgl2 = canvasElement.getContext('webgl2');
     if (webgl2 != null) {
-      // WebGL2 context needs to be handled differently than WebGL1
-      final loseContextExtension = callMethod(
-        webgl2,
-        'getExtension',
-        ['WEBGL_lose_context'],
-      );
-      if (loseContextExtension != null) {
-        callMethod(loseContextExtension as Object, 'loseContext', []);
-        callMethod(loseContextExtension, 'restoreContext', []);
+      final loseContextJsObject = webgl2.callMethod(
+        'getExtension'.toJS,
+        'WEBGL_lose_context'.toJS,
+      ) as JSObject?;
+
+      if (loseContextJsObject != null) {
+        final loseContextExt = LoseContext(loseContextJsObject);
+        loseContextExt.loseContext();
+        loseContextExt.restoreContext();
       }
     }
   }
@@ -542,4 +554,10 @@ class ArcgisMapWebController {
 
   Stream<bool> get isGraphicHoveredStream =>
       _layerController!.isGraphicHoveredStreamController.stream;
+}
+
+// CORRECTED DEFINITION: The primary constructor is now public and unnamed.
+extension type LoseContext(JSObject _) implements JSObject {
+  external void loseContext();
+  external void restoreContext();
 }
