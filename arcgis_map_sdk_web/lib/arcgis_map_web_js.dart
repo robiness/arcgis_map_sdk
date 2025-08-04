@@ -1,5 +1,4 @@
-@JS()
-import 'dart:async';
+import 'dart:js/js_wasm.dart';
 
 import 'package:web/web.dart';
 
@@ -361,10 +360,6 @@ class JsElevationProfile {
 
 @JS()
 abstract class Promise<T> {}
-
-extension PromiseExtension<T> on Promise<T> {
-  Future<T> toFuture() => promiseToFuture(this);
-}
 
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Accessor.html
 @JS("esri.core.Accessor")
