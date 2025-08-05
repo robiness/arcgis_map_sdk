@@ -15,8 +15,12 @@ extension type JsPoint._(JSObject _) implements JSObject {
   external factory JsPoint(JSObject map);
 }
 //
-@JS("loadFeatureLayer")
-external JSObject loadFeatureLayer();
+@JS('require')
+external JSFunction get require;
+//
+/// Global require function for AMD module loading
+@JS('window')
+external JSObject get window;
 //
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-Layer.html
 @JS("esri.layers.Layer")
@@ -72,11 +76,30 @@ extension type JsGraphicsLayer._(JSObject _) implements JSObject {
   external String get id;
 }
 //
-/// https://developers.arcgis.com/javascript/latest/sample-code/layers-scenelayer/
-@JS("esri.layers.SceneLayer")
-extension type JsSceneLayer._(JSObject _) implements JSObject {
-  external factory JsSceneLayer(JSObject properties);
+/// SceneLayer Options for CDN/AMD approach
+extension type JsSceneLayerOptions._(JSObject _) implements JSObject {
+  external factory JsSceneLayerOptions({String url, String id});
+}
+//
+/// SceneLayer Constructor - available globally after ArcGIS CDN loads
+@JS('window.SceneLayer')
+external JSFunction? get sceneLayerConstructor;
 
+/// External constructor function for SceneLayer 
+@JS('window.SceneLayer')
+external JsSceneLayer createSceneLayer(JSObject options);
+
+/// GraphicsLayer Constructor - available globally after ArcGIS CDN loads
+@JS('window.GraphicsLayer')
+external JSFunction? get graphicsLayerConstructor;
+
+/// FeatureLayer Constructor - available globally after ArcGIS CDN loads
+@JS('window.FeatureLayer')
+external JSFunction? get featureLayerConstructor;
+//
+/// https://developers.arcgis.com/javascript/latest/sample-code/layers-scenelayer/
+/// SceneLayer will be available after CDN loads
+extension type JsSceneLayer._(JSObject _) implements JSObject {
   external set elevationInfo(JSObject data);
 
   external JSObject get elevationInfo;
@@ -99,7 +122,7 @@ extension type DefaultUI._(JSObject _) implements JSObject {
 }
 //
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Attribution.html
-@JS("esri.core.widgets.Attribution")
+@JS("esri.widgets.Attribution")
 extension type JsAttribution._(JSObject _) implements JSObject {
   external factory JsAttribution(JSObject properties);
 
@@ -243,6 +266,8 @@ extension type JsView._(JSObject _) implements JSObject {
   external set container(JSObject? value);
 
   external JsExtent get extent;
+
+  external JsEsriMap get map;
 }
 //
 @JS("esri.views.MapView")

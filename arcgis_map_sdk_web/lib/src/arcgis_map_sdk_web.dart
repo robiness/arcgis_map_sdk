@@ -38,9 +38,40 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       String? url,
       int mapId,
       void Function(double p1)? getZoom,
-      String layerId) {
-    // TODO: implement addFeatureLayer
-    throw UnimplementedError();
+      String layerId) async {
+    final view = _isSceneViewActive[mapId]!
+        ? _sceneViews[mapId]!
+        : _mapViews[mapId]!;
+
+    // Check that FeatureLayer constructor is available globally after ArcGIS CDN loads
+    final constructor = featureLayerConstructor;
+    
+    if (constructor == null) {
+      throw Exception('FeatureLayer constructor not found. Ensure ArcGIS API is loaded.');
+    }
+    
+    // Create FeatureLayer options as JSObject
+    final featureLayerOptions = {
+      'id': layerId,
+      if (url != null) 'url': url,
+    }.jsify() as JSObject;
+
+    // Create FeatureLayer instance using jsEval with direct constructor call
+    // This ensures the 'new' operator is used correctly
+    final createFeatureLayerJS = '''
+      (function(options) {
+        return new window.FeatureLayer(options);
+      })
+    ''';
+    final constructorFn = jsEval(createFeatureLayerJS.toJS) as JSFunction;
+    final featureLayer = constructorFn.callAsFunction(null, featureLayerOptions) as JsFeatureLayer;
+
+    view.map.add(featureLayer);
+
+    return FeatureLayer(
+      id: layerId,
+      url: url,
+    );
   }
 
   @override
@@ -51,19 +82,79 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Future<GraphicsLayer> addGraphicsLayer(GraphicsLayerOptions options,
-      int mapId, String layerId, void Function(dynamic p1)? onPressed) {
-    // TODO: implement addGraphicsLayer
-    throw UnimplementedError();
+      int mapId, String layerId, void Function(dynamic p1)? onPressed) async {
+    final view = _isSceneViewActive[mapId]!
+        ? _sceneViews[mapId]!
+        : _mapViews[mapId]!;
+
+    // Check that GraphicsLayer constructor is available globally after ArcGIS CDN loads
+    final constructor = graphicsLayerConstructor;
+    
+    if (constructor == null) {
+      throw Exception('GraphicsLayer constructor not found. Ensure ArcGIS API is loaded.');
+    }
+    
+    // Create GraphicsLayer options as JSObject
+    final graphicsLayerOptions = {
+      'id': layerId,
+    }.jsify() as JSObject;
+
+    // Create GraphicsLayer instance using jsEval with direct constructor call
+    // This ensures the 'new' operator is used correctly
+    final createGraphicsLayerJS = '''
+      (function(options) {
+        return new window.GraphicsLayer(options);
+      })
+    ''';
+    final constructorFn = jsEval(createGraphicsLayerJS.toJS) as JSFunction;
+    final graphicsLayer = constructorFn.callAsFunction(null, graphicsLayerOptions) as JsGraphicsLayer;
+
+    view.map.add(graphicsLayer);
+
+    return GraphicsLayer(
+      id: layerId,
+    );
   }
 
   @override
-  Future<SceneLayer> addSceneLayer(
-      {required SceneLayerOptions options,
-      required String layerId,
-      required String url,
-      required int mapId}) {
-    // TODO: implement addSceneLayer
-    throw UnimplementedError();
+  Future<SceneLayer> addSceneLayer({
+    required SceneLayerOptions options,
+    required String layerId,
+    required String url,
+    required int mapId,
+  }) async {
+    final view = _isSceneViewActive[mapId]!
+        ? _sceneViews[mapId]!
+        : _mapViews[mapId]!;
+
+    // Check that SceneLayer constructor is available globally after ArcGIS CDN loads
+    final constructor = sceneLayerConstructor;
+    
+    if (constructor == null) {
+      throw Exception('SceneLayer constructor not found. Ensure ArcGIS API is loaded.');
+    }
+    
+    // Create SceneLayer options as JSObject
+    final sceneLayerOptions = {
+      'url': url,
+      'id': layerId,
+    }.jsify() as JSObject;
+
+    // Create SceneLayer instance using jsEval with direct constructor call
+    // This ensures the 'new' operator is used correctly
+    final createSceneLayerJS = '''
+      (function(options) {
+        return new window.SceneLayer(options);
+      })
+    ''';
+    final constructorFn = jsEval(createSceneLayerJS.toJS) as JSFunction;
+    final sceneLayer = constructorFn.callAsFunction(null, sceneLayerOptions) as JsSceneLayer;
+
+    view.map.add(sceneLayer);
+
+    return SceneLayer(
+      id: layerId,
+    );
   }
 
   @override
@@ -73,8 +164,23 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<String> attributionText(int mapId) {
-    // TODO: implement attributionText
-    throw UnimplementedError();
+    final controller = StreamController<String>();
+    final view = _isSceneViewActive[mapId]!
+        ? _sceneViews[mapId]!
+        : _mapViews[mapId]!;
+
+    final attribution = JsAttribution(
+      {'view': view}.jsify() as JSObject,
+    );
+
+    // Initial value
+    controller.add(attribution.attributionText);
+
+    // There's no watch handler in the JS interop,
+    // so for now we'll just return the initial value.
+    // TODO: Implement a watch handler to get updates.
+
+    return controller.stream;
   }
 
   @override
@@ -199,11 +305,19 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final map3D = JsEsriMap(mapProperties3D);
       print('3D Map created successfully');
 
-      // Find the container div
+      // Wait for the container div to be created by Flutter
       print('Looking for container: map-$mapId');
-      final container = web.document.getElementById('map-$mapId');
+      web.Element? container;
+      
+      // Wait up to 5 seconds for container to appear
+      for (int i = 0; i < 50; i++) {
+        container = web.document.getElementById('map-$mapId');
+        if (container != null) break;
+        await Future.delayed(Duration(milliseconds: 100));
+      }
+      
       if (container == null) {
-        throw Exception('Map container not found for id: map-$mapId');
+        throw Exception('Map container not found for id: map-$mapId after waiting');
       }
       print('Container found: ${container.id}');
 
@@ -317,8 +431,12 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         require([
           "esri/Map",
           "esri/views/MapView",
-          "esri/views/SceneView"
-        ], function(Map, MapView, SceneView) {
+          "esri/views/SceneView",
+          "esri/widgets/Attribution",
+          "esri/layers/SceneLayer",
+          "esri/layers/GraphicsLayer",
+          "esri/layers/FeatureLayer"
+        ], function(Map, MapView, SceneView, Attribution, SceneLayer, GraphicsLayer, FeatureLayer) {
           console.log("ArcGIS modules loaded via AMD");
           
           // Expose modules globally with proper nested structure for Dart interop
@@ -327,12 +445,25 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
             views: {
               MapView: MapView,
               SceneView: SceneView
+            },
+            widgets: {
+              Attribution: Attribution
+            },
+            layers: {
+              SceneLayer: SceneLayer,
+              GraphicsLayer: GraphicsLayer,
+              FeatureLayer: FeatureLayer
             }
           };
           
+          // Expose constructors directly for easier Dart interop access
+          window.SceneLayer = SceneLayer;
+          window.GraphicsLayer = GraphicsLayer;
+          window.FeatureLayer = FeatureLayer;
+          
           // Signal that modules are ready
           window._arcgisModulesReady = true;
-          console.log("ArcGIS modules exposed globally");
+          console.log("ArcGIS modules exposed globally, including SceneLayer, GraphicsLayer, and FeatureLayer");
         });
       '''
           .toJS);
