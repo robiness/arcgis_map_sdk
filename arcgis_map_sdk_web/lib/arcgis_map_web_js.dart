@@ -240,13 +240,13 @@ extension type JsView._(JSObject _) implements JSObject {
   external JSObject? get popup;
 
   external JSObject get container;
-  external set container(JSObject value);
+  external set container(JSObject? value);
 
   external JsExtent get extent;
 }
 //
 @JS("esri.views.MapView")
-extension type JsMapView._(JSObject _) implements JSObject {
+extension type JsMapView._(JSObject _) implements JsView {
   external factory JsMapView(JSObject properties);
 
   external double get zoom;
@@ -282,12 +282,12 @@ extension type JsMapView._(JSObject _) implements JSObject {
   external set viewpoint(JsViewpoint value);
 
   external JSObject get container;
-  external set container(JSObject value);
+  external set container(JSObject? value);
 }
 //
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-views-SceneView.html
 @JS("esri.views.SceneView")
-extension type JsSceneView._(JSObject _) implements JSObject {
+extension type JsSceneView._(JSObject _) implements JsView {
   external factory JsSceneView(JSObject properties);
 
   external JSObject get padding;
@@ -300,8 +300,6 @@ extension type JsSceneView._(JSObject _) implements JSObject {
   external DefaultUI get ui;
 
   external set padding(JSObject padding);
-
-  external JsHandle on(JSArray<JSString> event, JSFunction callback);
 
   external JSPromise<JsHitTestResult> hitTest(JSObject event);
 
@@ -325,7 +323,7 @@ extension type JsSceneView._(JSObject _) implements JSObject {
   external set camera(JsCamera value);
 
   external JSObject get container;
-  external set container(JSObject value);
+  external set container(JSObject? value);
 }
 //
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-Viewpoint.html

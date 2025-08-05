@@ -1,18 +1,23 @@
+import 'dart:async';
+import 'dart:js_interop';
+import 'dart:ui_web' as ui_web;
+
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
+import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'dart:ui_web' as ui_web;
 import 'package:web/web.dart' as web;
-import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
-import 'dart:js_interop';
-import 'dart:async';
 
 @JS('eval')
 external JSAny jsEval(JSString code);
 
 class ArcgisMapWeb extends ArcgisMapPlatform {
   static final Map<int, JsMapView> _mapViews = {};
+  static final Map<int, JsSceneView> _sceneViews = {};
+  static final Map<int, bool> _isSceneViewActive = {};
+  static final Map<int, Future Function(MethodCall)> _methodCallHandlers = {};
+  static final Map<int, StreamController<Attributes?>> _clickControllers = {};
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
   static final Set<String> _registeredViewTypes = {};
@@ -78,9 +83,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       required PlatformViewCreatedCallback onPlatformViewCreated,
       required ArcgisMapOptions mapOptions}) {
     print('buildView called with creationId: $creationId');
-    
+
     final viewType = 'arcgis-map-$creationId';
-    
+
     // Register the HTML element factory only once
     if (!_registeredViewTypes.contains(viewType)) {
       print('Registering view factory for: $viewType');
@@ -97,7 +102,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     } else {
       print('View factory already registered for: $viewType');
     }
-    
+
     print('Returning HtmlElementView');
     return HtmlElementView(
       viewType: viewType,
@@ -171,19 +176,28 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   Future<void> init(int mapId) async {
     try {
       print('Starting map initialization for mapId: $mapId');
-      
+
       // Wait for ArcGIS API to be loaded
       print('Waiting for ArcGIS API...');
       await _waitForArcGISAPI();
       print('ArcGIS API loaded successfully');
 
-      // Create the map
-      print('Creating map...');
-      final mapProperties = {
+      // Create the map for 2D
+      print('Creating 2D map...');
+      final mapProperties2D = {
         'basemap': 'streets-navigation-vector'.toJS,
       }.jsify()! as JSObject;
-      final map = JsEsriMap(mapProperties);
-      print('Map created successfully');
+      final map2D = JsEsriMap(mapProperties2D);
+      print('2D Map created successfully');
+
+      // Create the map for 3D with proper basemap and ground
+      print('Creating 3D map...');
+      final mapProperties3D = {
+        'basemap': 'topo-3d'.toJS,
+        'ground': 'world-elevation'.toJS,
+      }.jsify()! as JSObject;
+      final map3D = JsEsriMap(mapProperties3D);
+      print('3D Map created successfully');
 
       // Find the container div
       print('Looking for container: map-$mapId');
@@ -193,19 +207,45 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
       print('Container found: ${container.id}');
 
-      // Create the map view
-      print('Creating map view...');
+      // Create the 2D MapView
+      print('Creating 2D map view...');
       final mapViewProperties = {
         'container': container,
-        'map': map,
+        'map': map2D,
         'zoom': 2.toJS,
         'center': [-118.805, 34.027].map((n) => n.toJS).toList().toJS,
       }.jsify()! as JSObject;
       final mapView = JsMapView(mapViewProperties);
-      print('Map view created successfully');
+      print('2D Map view created successfully');
 
-      // Store the map view for later use
+      // Create the 3D SceneView (but don't attach container yet)
+      print('Creating 3D scene view...');
+      final sceneViewProperties = {
+        'container': null, // Will be set when switching to 3D
+        'map': map3D,
+        'camera': {
+          'position': {
+            'spatialReference': {'latestWkid': 3857, 'wkid': 102100}.jsify(),
+            'x': (-118.805 * 111320).toJS, // Rough conversion to Web Mercator
+            'y': (34.027 * 111320).toJS,
+            'z': 18161244.toJS,
+          }.jsify(),
+          'heading': 0.toJS,
+          'tilt': 0.49.toJS,
+        }.jsify(),
+      }.jsify()! as JSObject;
+      final sceneView = JsSceneView(sceneViewProperties);
+      print('3D Scene view created successfully');
+
+      // Store both views for later use
       _mapViews[mapId] = mapView;
+      _sceneViews[mapId] = sceneView;
+      _isSceneViewActive[mapId] = false; // Start with 2D view active
+
+      // Set up click listeners for both views
+      _setupClickListener(mapId, mapView);
+      _setupClickListener(mapId, sceneView);
+
       print('Map initialization completed for mapId: $mapId');
     } catch (e) {
       print('Error initializing map: $e');
@@ -218,7 +258,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       await _injectArcGISScripts();
       _scriptsInjected = true;
     }
-    
+
     // Check if esri object exists
     while (!_isArcGISAPILoaded()) {
       await Future.delayed(const Duration(milliseconds: 100));
@@ -227,21 +267,23 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   static Future<void> _injectArcGISScripts() async {
     print('Starting ArcGIS script injection...');
-    
+
     // Inject CSS
     final cssLink = web.document.createElement('link') as web.HTMLLinkElement;
     cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://js.arcgis.com/$_arcgisVersion/esri/themes/light/main.css';
+    cssLink.href =
+        'https://js.arcgis.com/$_arcgisVersion/esri/themes/light/main.css';
     web.document.head?.appendChild(cssLink);
     print('CSS injected: ${cssLink.href}');
 
     // Inject JavaScript
-    final script = web.document.createElement('script') as web.HTMLScriptElement;
+    final script =
+        web.document.createElement('script') as web.HTMLScriptElement;
     script.src = 'https://js.arcgis.com/$_arcgisVersion/';
     script.async = true;
-    
+
     print('Script element created: ${script.src}');
-    
+
     // Wait for script to load
     final scriptCompleter = Completer<void>();
     script.onLoad.listen((_) {
@@ -252,17 +294,17 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       print('Failed to load ArcGIS script: $error');
       scriptCompleter.completeError('Failed to load ArcGIS API: $error');
     });
-    
+
     web.document.head?.appendChild(script);
     print('Script added to document head');
-    
+
     try {
       await scriptCompleter.future;
       print('Script loaded, now requiring AMD modules...');
-      
+
       // Now use AMD require to load the modules and expose them globally
       _arcgisModulesCompleter = Completer<void>();
-      
+
       jsEval('''
         // Configure AMD loader to use the correct base path
         require.config({
@@ -292,13 +334,18 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           window._arcgisModulesReady = true;
           console.log("ArcGIS modules exposed globally");
         });
-      '''.toJS);
-      
+      '''
+          .toJS);
+
       // Wait for the modules to be loaded
-      while (!jsEval('typeof window._arcgisModulesReady !== "undefined" && window._arcgisModulesReady === true'.toJS).toString().contains('true')) {
+      while (!jsEval(
+              'typeof window._arcgisModulesReady !== "undefined" && window._arcgisModulesReady === true'
+                  .toJS)
+          .toString()
+          .contains('true')) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
-      
+
       _arcgisModulesCompleter!.complete();
       print('ArcGIS AMD modules loaded and exposed globally');
     } catch (e) {
@@ -310,7 +357,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   bool _isArcGISAPILoaded() {
     try {
       // Check if our AMD modules are loaded and ready
-      final result = jsEval('typeof window._arcgisModulesReady !== "undefined" && window._arcgisModulesReady === true'.toJS);
+      final result = jsEval(
+          'typeof window._arcgisModulesReady !== "undefined" && window._arcgisModulesReady === true'
+              .toJS);
       final isLoaded = result.toString().contains('true');
       print('ArcGIS API loaded check: $isLoaded');
       return isLoaded;
@@ -347,8 +396,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<Attributes?> onClickListener(int mapId) {
-    // TODO: implement onClickListener
-    throw UnimplementedError();
+    if (!_clickControllers.containsKey(mapId)) {
+      _clickControllers[mapId] = StreamController<Attributes?>.broadcast();
+    }
+    return _clickControllers[mapId]!.stream;
   }
 
   @override
@@ -422,8 +473,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<void> setMethodCallHandler(
       {required int mapId, required Future Function(MethodCall p1) onCall}) {
-    // TODO: implement setMethodCallHandler
-    throw UnimplementedError();
+    _methodCallHandlers[mapId] = onCall;
+    return Future.value();
   }
 
   @override
@@ -462,7 +513,57 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   void switchMapStyle(int mapId, MapStyle mapStyle) {
-    // TODO: implement switchMapStyle
+    try {
+      print('Switching map style for mapId: $mapId to: $mapStyle');
+
+      final mapView = _mapViews[mapId];
+      final sceneView = _sceneViews[mapId];
+      final isCurrentlySceneView = _isSceneViewActive[mapId] ?? false;
+
+      if (mapView == null || sceneView == null) {
+        print('Views not found for mapId: $mapId');
+        return;
+      }
+
+      final container = web.document.getElementById('map-$mapId');
+      if (container == null) {
+        print('Container not found for mapId: $mapId');
+        return;
+      }
+
+      final shouldUse3D = mapStyle == MapStyle.threeD;
+
+      if (shouldUse3D && !isCurrentlySceneView) {
+        // Switch from 2D to 3D
+        print('Switching from 2D to 3D');
+
+        // Remove container from 2D view
+        mapView.container = null;
+
+        // Set container to 3D view
+        sceneView.container = container;
+
+        _isSceneViewActive[mapId] = true;
+        print('Successfully switched to 3D view');
+      } else if (!shouldUse3D && isCurrentlySceneView) {
+        // Switch from 3D to 2D
+        print('Switching from 3D to 2D');
+
+        // Remove container from 3D view
+        sceneView.container = null;
+
+        // Set container to 2D view
+        mapView.container = container;
+
+        _isSceneViewActive[mapId] = false;
+        print('Successfully switched to 2D view');
+      } else {
+        print(
+            'No view change needed - already in ${shouldUse3D ? '3D' : '2D'} mode');
+      }
+    } catch (e) {
+      print('Error switching map style: $e');
+    }
   }
 
   @override
@@ -525,5 +626,21 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       AnimationOptions? animationOptions}) {
     // TODO: implement zoomOut
     throw UnimplementedError();
+  }
+
+  static void _setupClickListener(int mapId, JsView view) {
+    // Create the click event handler
+    final clickHandler = (JSObject event) {
+      final controller = _clickControllers[mapId];
+      if (controller != null) {
+        // For now, emit null attributes as a basic implementation
+        // TODO: Implement proper hit testing to get feature attributes
+        controller.add(null);
+      }
+    }.toJS as JSFunction;
+
+    // Add click event listener to the view
+    final eventArray = ['click'.toJS].toJS;
+    view.on(eventArray, clickHandler);
   }
 }
