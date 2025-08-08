@@ -17,6 +17,48 @@ extension type JsPoint._(JSObject _) implements JSObject {
 //
 @JS('require')
 external JSFunction get require;
+
+/// Configure AMD require settings
+@JS('require.config')
+external void requireConfig(JSObject config);
+
+/// Check if window property exists and get its value
+@JS('window._arcgisModulesReady')
+external JSAny? get arcgisModulesReady;
+
+/// Set property on JavaScript object
+@JS('Object.defineProperty')
+external void defineProperty(JSObject obj, JSString name, JSObject descriptor);
+
+/// External function constructor for creating callback functions
+@JS('Function')
+external JSFunction createFunction(JSString code);
+
+/// Helper extension for JSObject property access
+extension JSObjectExtensions on JSObject {
+  JSAny? operator [](String key) {
+    return (this as dynamic)[key];
+  }
+}
+
+/// Helper functions for map operations to replace jsEval calls
+@JS()
+external JSFunction get createMapRemoveFunction;
+
+@JS()  
+external JSFunction get createScreenshotFunction;
+
+@JS()
+external JSFunction get createNavigationFunction;
+
+@JS()
+external JSFunction get createAttributionFunction;
+
+@JS()
+external JSFunction get createGraphicRemoveFunction;
+
+@JS()
+external JSFunction get createBasemapFunction;
 //
 /// Global require function for AMD module loading
 @JS('window')
@@ -413,4 +455,372 @@ extension type JsEditsResult._(JSObject _) implements JSObject {
   external JSObject get addFeatureResults;
   external JSObject get updateFeatureResults;
   external JSObject get deleteFeatureResults;
+}
+
+//
+// Enhanced JS Interop for ArcGIS 4.33
+//
+
+/// Enhanced MapView with all 4.33 features
+@JS("esri.views.MapView")
+extension type JsMapViewEnhanced._(JSObject _) implements JsView {
+  external factory JsMapViewEnhanced(JSObject properties);
+  
+  // Core properties
+  external JsEsriMap get map;
+  external set map(JsEsriMap value);
+  external JSObject? get container;
+  external set container(JSObject? value);
+  external JsExtent get extent;
+  external JsPoint get center;
+  external double get zoom;
+  external double get scale;
+  external double get rotation;
+  external JSObject get padding;
+  external set padding(JSObject value);
+  
+  // UI and interaction
+  external DefaultUI get ui;
+  external JSObject? get popup;
+  external set popup(JSObject? value);
+  
+  // Navigation and viewpoint
+  external JsViewpoint get viewpoint;
+  external set viewpoint(JsViewpoint value);
+  external JSPromise<JSObject?> goTo(JSObject target, [JSObject? options]);
+  
+  // Hit testing and events
+  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
+  external JsHandle on(JSString event, JSFunction handler);
+  
+  // Export and screenshot
+  external JSPromise<JSObject> takeScreenshot([JSObject? options]);
+  
+  // Navigation controls
+  external JSObject get navigation;
+  
+  // Constraints
+  external JSObject get constraints;
+  external set constraints(JSObject value);
+}
+
+/// Enhanced SceneView with all 4.33 features
+@JS("esri.views.SceneView")
+extension type JsSceneViewEnhanced._(JSObject _) implements JsView {
+  external factory JsSceneViewEnhanced(JSObject properties);
+  
+  // Core properties
+  external JsEsriMap get map;
+  external set map(JsEsriMap value);
+  external JSObject? get container;
+  external set container(JSObject? value);
+  external JsExtent get extent;
+  external JsPoint get center;
+  external double get zoom;
+  external double get scale;
+  external JSObject get padding;
+  external set padding(JSObject value);
+  
+  // 3D specific
+  external JsCamera get camera;
+  external set camera(JsCamera value);
+  external String get viewingMode;
+  external set viewingMode(String value);
+  
+  // UI and interaction
+  external DefaultUI get ui;
+  external JSObject? get popup;
+  external set popup(JSObject? value);
+  
+  // Navigation and viewpoint
+  external JsViewpoint get viewpoint;
+  external set viewpoint(JsViewpoint value);
+  external JSPromise<JSObject?> goTo(JSObject target, [JSObject? options]);
+  
+  // Hit testing and events
+  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
+  external JsHandle on(JSString event, JSFunction handler);
+  
+  // Export and screenshot
+  external JSPromise<JSObject> takeScreenshot([JSObject? options]);
+  
+  // Navigation controls
+  external JSObject get navigation;
+  
+  // Environment (lighting, atmosphere)
+  external JSObject get environment;
+  external set environment(JSObject value);
+}
+
+/// Enhanced Camera with complete 4.33 API
+@JS("esri.Camera")
+extension type JsCameraEnhanced._(JSObject _) implements JSObject {
+  external factory JsCameraEnhanced(JSObject properties);
+  
+  external JsPoint get position;
+  external set position(JsPoint value);
+  external double get heading;
+  external set heading(double value);
+  external double get tilt;
+  external set tilt(double value);
+  external double get fov;
+  external set fov(double value);
+  
+  external JsCameraEnhanced clone();
+}
+
+/// Enhanced Map with complete 4.33 API  
+@JS("esri.Map")
+extension type JsMapEnhanced._(JSObject _) implements JSObject {
+  external factory JsMapEnhanced(JSObject properties);
+  
+  external String get basemap;
+  external set basemap(String value);
+  external Collection<JsLayer> get layers;
+  external Collection<JsLayer> get allLayers;
+  external String get ground;
+  external set ground(String value);
+  
+  // Layer management
+  external void add(JsLayer layer, [int? index]);
+  external void addMany(JSArray<JsLayer> layers, [int? index]);
+  external JsLayer? remove(JsLayer layer);
+  external JSArray<JsLayer> removeMany(JSArray<JsLayer> layers);
+  external void removeAll();
+  external JsLayer? findLayerById(JSString id);
+  
+  // Loading state
+  external String get loadStatus;
+  external JSPromise<JSObject> load();
+  external JSPromise<JSObject> when([JSFunction? callback]);
+}
+
+/// Enhanced Graphics Layer with complete API
+@JS("esri.layers.GraphicsLayer")
+extension type JsGraphicsLayerEnhanced._(JSObject _) implements JSObject {
+  external factory JsGraphicsLayerEnhanced(JSObject properties);
+  
+  external String get id;
+  external set id(String value);
+  external String get title;
+  external set title(String value);
+  external String get type;
+  external bool get visible;
+  external set visible(bool value);
+  external double get opacity;
+  external set opacity(double value);
+  
+  // Graphics management
+  external Collection<JsGraphic> get graphics;
+  external void add(JsGraphic graphic);
+  external void addMany(JSArray<JsGraphic> graphics);
+  external JsGraphic? remove(JsGraphic graphic);
+  external JSArray<JsGraphic> removeMany(JSArray<JsGraphic> graphics);
+  external void removeAll();
+  
+  // Elevation
+  external JSObject? get elevationInfo;
+  external set elevationInfo(JSObject? value);
+  
+  // Loading and lifecycle
+  external String get loadStatus;
+  external JSPromise<JSObject> load();
+  external void destroy();
+}
+
+/// Enhanced Graphic with complete API
+@JS("esri.Graphic")
+extension type JsGraphicEnhanced._(JSObject _) implements JSObject {
+  external factory JsGraphicEnhanced(JSObject properties);
+  
+  external JsGeometry? get geometry;
+  external set geometry(JsGeometry? value);
+  external JSObject? get attributes;
+  external set attributes(JSObject? value);
+  external JSObject? get symbol;
+  external set symbol(JSObject? value);
+  external JSObject? get popupTemplate;
+  external set popupTemplate(JSObject? value);
+  
+  external JsGraphicEnhanced clone();
+  external JSObject toJSON();
+}
+
+/// Enhanced FeatureLayer with complete API
+@JS("esri.layers.FeatureLayer") 
+extension type JsFeatureLayerEnhanced._(JSObject _) implements JSObject {
+  external factory JsFeatureLayerEnhanced(JSObject properties);
+  
+  external String get id;
+  external set id(String value);
+  external String get title;
+  external set title(String value);
+  external String get type;
+  external String? get url;
+  external set url(String? value);
+  external bool get visible;
+  external set visible(bool value);
+  external double get opacity;
+  external set opacity(double value);
+  
+  // Feature management
+  external Collection<JsGraphic>? get source;
+  external set source(Collection<JsGraphic>? value);
+  external JSArray<JSObject>? get fields;
+  external set fields(JSArray<JSObject>? value);
+  external String? get objectIdField;
+  external set objectIdField(String? value);
+  external String? get geometryType;
+  external set geometryType(String? value);
+  
+  // Queries and edits
+  external JSPromise<JsFeatureSet> queryFeatures([JSObject? query]);
+  external JSPromise<JsEditsResult> applyEdits(JSObject edits);
+  
+  // Rendering
+  external JSObject? get renderer;
+  external set renderer(JSObject? value);
+  external JSObject? get labelingInfo;
+  external set labelingInfo(JSObject? value);
+  
+  // Loading and lifecycle
+  external String get loadStatus;
+  external JSPromise<JSObject> load();
+  external void destroy();
+}
+
+/// Enhanced SceneLayer with complete API
+@JS("esri.layers.SceneLayer")
+extension type JsSceneLayerEnhanced._(JSObject _) implements JSObject {
+  external factory JsSceneLayerEnhanced(JSObject properties);
+  
+  external String get id;
+  external set id(String value);
+  external String get title;
+  external set title(String value);  
+  external String get type;
+  external String get url;
+  external set url(String value);
+  external bool get visible;
+  external set visible(bool value);
+  external double get opacity;
+  external set opacity(double value);
+  
+  // 3D specific
+  external JSObject? get elevationInfo;
+  external set elevationInfo(JSObject? value);
+  external JSObject? get popupTemplate;
+  external set popupTemplate(JSObject? value);
+  
+  // Loading and lifecycle
+  external String get loadStatus;
+  external JSPromise<JSObject> load();
+  external void destroy();
+}
+
+/// Navigation control for views
+@JS()
+extension type JsNavigation._(JSObject _) implements JSObject {
+  external bool get enabled;
+  external set enabled(bool value);
+  external bool get mouseWheelZoomEnabled;
+  external set mouseWheelZoomEnabled(bool value);
+  external bool get browserTouchPanEnabled;
+  external set browserTouchPanEnabled(bool value);
+}
+
+/// View constraints
+@JS()
+extension type JsViewConstraints._(JSObject _) implements JSObject {
+  external JSObject? get geometry;
+  external set geometry(JSObject? value);
+  external double? get minZoom;
+  external set minZoom(double? value);
+  external double? get maxZoom;
+  external set maxZoom(double? value);
+  external double? get minScale;
+  external set minScale(double? value);
+  external double? get maxScale;
+  external set maxScale(double? value);
+}
+
+/// Environment settings for SceneView
+@JS()
+extension type JsEnvironment._(JSObject _) implements JSObject {
+  external JSObject get lighting;
+  external set lighting(JSObject value);
+  external JSObject get atmosphere;
+  external set atmosphere(JSObject value);
+  external JSObject? get background;
+  external set background(JSObject? value);
+}
+
+/// Basemap with enhanced API
+@JS("esri.Basemap")
+extension type JsBasemapEnhanced._(JSObject _) implements JSObject {
+  external factory JsBasemapEnhanced(JSObject properties);
+  
+  external String get id;
+  external String get title;
+  external Collection<JsLayer> get baseLayers;
+  external Collection<JsLayer> get referenceLayers;
+  external String get portalItem;
+  external bool get loaded;
+  external JSPromise<JSObject> load();
+}
+
+/// Geometry utilities
+@JS("esri.geometry.geometryEngine")
+external JSObject get geometryEngine;
+
+@JS("esri.geometry.Polygon")
+extension type JsPolygon._(JSObject _) implements JsGeometry {
+  external factory JsPolygon(JSObject properties);
+  external JSArray<JSArray<JSArray<JSNumber>>> get rings;
+  external set rings(JSArray<JSArray<JSArray<JSNumber>>> value);
+  external bool contains(JsPoint point);
+}
+
+@JS("esri.geometry.Polyline") 
+extension type JsPolyline._(JSObject _) implements JsGeometry {
+  external factory JsPolyline(JSObject properties);
+  external JSArray<JSArray<JSArray<JSNumber>>> get paths;
+  external set paths(JSArray<JSArray<JSArray<JSNumber>>> value);
+}
+
+/// Symbol types for graphics
+@JS("esri.symbols.SimpleMarkerSymbol")
+extension type JsSimpleMarkerSymbol._(JSObject _) implements JSObject {
+  external factory JsSimpleMarkerSymbol(JSObject properties);
+  external String get type;
+  external String get style;
+  external set style(String value);
+  external JSNumber get size;
+  external set size(JSNumber value);
+  external JSObject get color;
+  external set color(JSObject value);
+}
+
+@JS("esri.symbols.SimpleLineSymbol")
+extension type JsSimpleLineSymbol._(JSObject _) implements JSObject {
+  external factory JsSimpleLineSymbol(JSObject properties);
+  external String get type;
+  external String get style;
+  external set style(String value);
+  external JSNumber get width;
+  external set width(JSNumber value);
+  external JSObject get color;
+  external set color(JSObject value);
+}
+
+@JS("esri.symbols.SimpleFillSymbol")
+extension type JsSimpleFillSymbol._(JSObject _) implements JSObject {
+  external factory JsSimpleFillSymbol(JSObject properties);
+  external String get type;
+  external String get style;
+  external set style(String value);
+  external JSObject get color;
+  external set color(JSObject value);
+  external JsSimpleLineSymbol? get outline;
+  external set outline(JsSimpleLineSymbol? value);
 }

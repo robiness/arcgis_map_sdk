@@ -86,39 +86,7 @@ class ArcgisMap extends StatefulWidget {
 
 class _ArcgisMapState extends State<ArcgisMap> {
   final int _mapId = _nextMapCreationId++;
-  late ArcgisMapController controller;
-
-  late ArcgisMapOptions _arcgisMapOptions = ArcgisMapOptions(
-    apiKey: widget.apiKey,
-    licenseKey: widget.licenseKey,
-    mapStyle: widget.mapStyle,
-    basemap: widget.basemap,
-    ground: widget.ground,
-    initialCenter: widget.initialCenter,
-    showLabelsBeneathGraphics: widget.showLabelsBeneathGraphics,
-    isInteractive: widget.isInteractive,
-    zoom: widget.zoom,
-    heading: widget.heading,
-    initialHeight: widget.initialHeight,
-    tilt: widget.tilt,
-    defaultUiList: widget.defaultUiList,
-    isPopupEnabled: widget.isPopupEnabled,
-    padding: widget.padding,
-    rotationEnabled: widget.rotationEnabled,
-    minZoom: widget.minZoom,
-    maxZoom: widget.maxZoom,
-    xMin: widget.xMin,
-    xMax: widget.xMax,
-    yMin: widget.yMin,
-    yMax: widget.yMax,
-    vectorTilesUrls: widget.vectorTileLayerUrls,
-    isAttributionTextVisible: widget.isAttributionTextVisible,
-  );
-
-  Future<void> onPlatformViewCreated(int id) async {
-    controller = await ArcgisMapController.init(id);
-    widget.onMapCreated?.call(controller);
-  }
+  late final ArcgisMapController controller;
 
   @override
   void initState() {
@@ -136,50 +104,41 @@ class _ArcgisMapState extends State<ArcgisMap> {
   }
 
   @override
-  void didUpdateWidget(ArcgisMap oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if ((widget.basemap != null) && oldWidget.basemap != widget.basemap) {
-      controller.toggleBaseMap(baseMap: widget.basemap!);
-    }
-    if (widget.isAttributionTextVisible != null &&
-        widget.isAttributionTextVisible != oldWidget.isAttributionTextVisible) {
-      controller.updateIsAttributionTextVisible(
-        widget.isAttributionTextVisible!,
-      );
-    }
-    _arcgisMapOptions = ArcgisMapOptions(
-      apiKey: widget.apiKey,
-      licenseKey: widget.licenseKey,
-      mapStyle: widget.mapStyle,
-      basemap: widget.basemap,
-      ground: widget.ground,
-      initialCenter: widget.initialCenter,
-      showLabelsBeneathGraphics: widget.showLabelsBeneathGraphics,
-      isInteractive: widget.isInteractive,
-      zoom: widget.zoom,
-      heading: widget.heading,
-      initialHeight: widget.initialHeight,
-      tilt: widget.tilt,
-      padding: widget.padding,
-      rotationEnabled: widget.rotationEnabled,
-      minZoom: widget.minZoom,
-      maxZoom: widget.maxZoom,
-      xMin: widget.xMin,
-      xMax: widget.xMax,
-      yMin: widget.yMin,
-      yMax: widget.yMax,
-      vectorTilesUrls: widget.vectorTileLayerUrls,
-      defaultUiList: widget.defaultUiList,
-      isAttributionTextVisible: widget.isAttributionTextVisible,
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
     return ArcgisMapPlatform.instance.buildView(
       creationId: _mapId,
       onPlatformViewCreated: onPlatformViewCreated,
-      mapOptions: _arcgisMapOptions,
+      mapOptions: ArcgisMapOptions(
+        apiKey: widget.apiKey,
+        licenseKey: widget.licenseKey,
+        mapStyle: widget.mapStyle,
+        basemap: widget.basemap,
+        ground: widget.ground,
+        initialCenter: widget.initialCenter,
+        showLabelsBeneathGraphics: widget.showLabelsBeneathGraphics,
+        isInteractive: widget.isInteractive,
+        zoom: widget.zoom,
+        heading: widget.heading,
+        initialHeight: widget.initialHeight,
+        tilt: widget.tilt,
+        defaultUiList: widget.defaultUiList,
+        isPopupEnabled: widget.isPopupEnabled,
+        padding: widget.padding,
+        rotationEnabled: widget.rotationEnabled,
+        minZoom: widget.minZoom,
+        maxZoom: widget.maxZoom,
+        xMin: widget.xMin,
+        xMax: widget.xMax,
+        yMin: widget.yMin,
+        yMax: widget.yMax,
+        vectorTilesUrls: widget.vectorTileLayerUrls,
+        isAttributionTextVisible: widget.isAttributionTextVisible,
+      ),
     );
+  }
+
+  Future<void> onPlatformViewCreated(int id) async {
+    controller = await ArcgisMapController.init(id);
+    widget.onMapCreated?.call(controller);
   }
 }
