@@ -43,7 +43,8 @@ void main() {
 
         // Verify the target parameters
         final target = goToCall['target'] as Map<String, dynamic>;
-        expect(target['center'], equals([testPoint.longitude, testPoint.latitude]));
+        expect(target['center'],
+            equals([testPoint.longitude, testPoint.latitude]));
         expect(target['zoom'], equals(testZoom));
       });
 
@@ -64,15 +65,17 @@ void main() {
         expect(goToCall, isNotNull);
 
         final target = goToCall!['target'] as Map<String, dynamic>;
-        expect(target['center'], equals([testPoint.longitude, testPoint.latitude]));
+        expect(target['center'],
+            equals([testPoint.longitude, testPoint.latitude]));
         expect(target.containsKey('zoom'), isFalse);
       });
 
       test('should include camera properties for 3D scene view', () async {
         // Arrange
-        final fakeSceneView = MockJsInteropFactory.createMockView(isSceneView: true);
+        final fakeSceneView =
+            MockJsInteropFactory.createMockView(isSceneView: true);
         final jsSceneView = createJSInteropWrapper<FakeJsView>(fakeSceneView);
-        
+
         const testPoint = LatLng(51.5074, -0.1278); // London
         const testZoom = 15.0;
         const testHeading = 45;
@@ -93,9 +96,10 @@ void main() {
         expect(goToCall, isNotNull);
 
         final target = goToCall!['target'] as Map<String, dynamic>;
-        expect(target['center'], equals([testPoint.longitude, testPoint.latitude]));
+        expect(target['center'],
+            equals([testPoint.longitude, testPoint.latitude]));
         expect(target['zoom'], equals(testZoom));
-        
+
         // Verify 3D camera properties
         expect(target.containsKey('camera'), isTrue);
         final cameraObj = target['camera'];
@@ -132,7 +136,8 @@ void main() {
 
         final options = goToCall['options'] as Map<String, dynamic>;
         expect(options['duration'], equals(2000.0));
-        expect(options['animationCurve'], equals('easeInOut')); // Uses .name property
+        expect(options['animationCurve'],
+            equals('easeInOut')); // Uses .name property
       });
 
       test('should clear previous captured calls', () async {
@@ -161,7 +166,8 @@ void main() {
 
         final lastCall = fakeView.getLastCall();
         final target = lastCall!['target'] as Map<String, dynamic>;
-        expect(target['center'], equals([testPoint2.longitude, testPoint2.latitude]));
+        expect(target['center'],
+            equals([testPoint2.longitude, testPoint2.latitude]));
       });
     });
 
@@ -176,6 +182,7 @@ void main() {
         final result = await controller.zoomIn(
           lodFactor: lodFactor,
           view: jsView as JsView,
+          isSceneView: false,
         );
 
         // Assert
@@ -200,6 +207,7 @@ void main() {
         final result = await controller.zoomOut(
           lodFactor: lodFactor,
           view: jsView as JsView,
+          isSceneView: false,
         );
 
         // Assert

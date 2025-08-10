@@ -1,19 +1,19 @@
 import 'dart:js_interop';
 
-@JS('esri/Map')
-class EsriMap {
-  external EsriMap(JSObject properties);
+@JS('esri.Map')
+extension type EsriMap._(JSObject _) implements JSObject {
+  external factory EsriMap(JSObject properties);
 }
 
-@JS('esri/views/MapView')
-class MapView {
-  external MapView(JSObject properties);
+@JS('esri.views.MapView')
+extension type MapView._(JSObject _) implements JSObject {
+  external factory MapView(JSObject properties);
 
   external EsriMap get map;
   external set map(EsriMap map);
 
-  external JSNumber get zoom;
-  external set zoom(JSNumber zoom);
+  external double get zoom;
+  external set zoom(double zoom);
 
   external JSObject get center;
   external set center(JSObject center);

@@ -1,19 +1,19 @@
 import 'dart:js_interop';
 
-@JS('esri/geometry/Polygon')
-class Polygon {
-  external Polygon(JSObject properties);
+@JS('esri.geometry.Polygon')
+extension type Polygon._(JSObject _) implements JSObject {
+  external factory Polygon(JSObject properties);
 
   external bool contains(JSObject point);
 }
 
-@JS('esri/geometry/Point')
-class Point {
-  external Point(JSObject properties);
+@JS('esri.geometry.Point')
+extension type Point._(JSObject _) implements JSObject {
+  external factory Point(JSObject properties);
 
-  external num get latitude;
-  external set latitude(num value);
+  external double get latitude;
+  external set latitude(double value);
 
-  external num get longitude;
-  external set longitude(num value);
+  external double get longitude;
+  external set longitude(double value);
 }

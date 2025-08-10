@@ -12,10 +12,10 @@ import 'package:sidekick_core/sidekick_core.dart';
 
 ArcgisMapProject afProject = ArcgisMapProject(SidekickContext.projectRoot);
 
-Future<void> runAm(List<String> args, {String? mainProjectPath}) async {
+Future<void> runAm(List<String> args) async {
   final runner = initializeSidekick(
-    mainProjectPath: mainProjectPath ?? 'arcgis_map_sdk',
-    flutterSdkPath: '/home/jules/flutter',
+    mainProjectPath: 'arcgis_map_sdk',
+    flutterSdkPath: systemFlutterSdkPath(),
   );
 
   runner

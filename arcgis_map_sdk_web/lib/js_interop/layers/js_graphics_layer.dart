@@ -1,6 +1,6 @@
 import 'dart:js_interop';
 
-@JS('esri/layers/GraphicsLayer')
-class JsGraphicsLayer {
-  external JsGraphicsLayer(JSObject properties);
+@JS('esri.layers.GraphicsLayer')
+extension type JsGraphicsLayer._(JSObject _) implements JSObject {
+  external factory JsGraphicsLayer(JSObject properties);
 }

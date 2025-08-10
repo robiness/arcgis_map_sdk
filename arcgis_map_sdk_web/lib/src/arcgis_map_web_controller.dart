@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
@@ -10,26 +9,26 @@ import 'package:flutter/services.dart';
 class ArcgisMapWebController {
   ArcgisMapWebController._({
     required this.mapId,
-  }) : _layerController = WebLayerController(mapId: mapId),
-       _streamManager = WebStreamManager(mapId: mapId);
+  })  : _layerController = WebLayerController(mapId: mapId),
+        _streamManager = WebStreamManager(mapId: mapId);
 
   final int mapId;
-  
+
   late final WebLayerController _layerController;
   late final WebStreamManager _streamManager;
-  
+
   // View management
   JsMapViewEnhanced? _mapView;
   JsSceneViewEnhanced? _sceneView;
   bool _isSceneViewActive = false;
   JsView? get _activeView => _isSceneViewActive ? _sceneView : _mapView;
-  
+
   static Future<ArcgisMapWebController> init(int id) async {
     final controller = ArcgisMapWebController._(mapId: id);
     await controller._initialize();
     return controller;
   }
-  
+
   void setViews(JsMapViewEnhanced mapView, JsSceneViewEnhanced sceneView) {
     _mapView = mapView;
     _sceneView = sceneView;
@@ -51,7 +50,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.addFeatureLayer(
       layerId: layerId,
       options: options,
@@ -70,7 +69,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.addGraphicsLayer(
       layerId: layerId,
       options: options,
@@ -86,7 +85,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.addSceneLayer(
       layerId: layerId,
       url: url,
@@ -99,50 +98,50 @@ class ArcgisMapWebController {
   Future<Uint8List> exportImage() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
-    return _layerController.exportImage(view);
+
+    return _layerController.exportImage(view, isSceneView: _isSceneViewActive);
   }
 
   // Stream Methods - Mirror main controller
   Stream<double> getZoom() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _streamManager.getZoom(view);
   }
 
   Stream<LatLng> centerPosition() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _streamManager.centerPosition(view);
   }
 
   Stream<BoundingBox> getBounds() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _streamManager.getBounds(view);
   }
 
   Stream<String> attributionText() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _streamManager.attributionText(view);
   }
 
   Stream<Attributes?> onClickListener() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _streamManager.onClickListener(view);
   }
 
   Stream<List<String>> visibleGraphics() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _streamManager.visibleGraphics(view);
   }
 
@@ -150,7 +149,7 @@ class ArcgisMapWebController {
   Future<void> addGraphic({required String layerId, required Graphic graphic}) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.addGraphic(
       layerId: layerId,
       graphic: graphic,
@@ -164,7 +163,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.removeGraphic(
       layerId: layerId,
       objectId: objectId,
@@ -181,7 +180,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     _layerController.removeGraphics(
       layerId: layerId,
       removeByAttributeKey: removeByAttributeKey,
@@ -202,7 +201,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.moveCamera(
       point: point,
       zoomLevel: zoomLevel,
@@ -220,11 +219,12 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.moveCameraToPoints(
       points: points,
       padding: padding,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
@@ -234,11 +234,12 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.zoomIn(
       lodFactor: lodFactor,
       animationOptions: animationOptions,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
@@ -248,11 +249,12 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.zoomOut(
       lodFactor: lodFactor,
       animationOptions: animationOptions,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
@@ -268,12 +270,13 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     _layerController.updateGraphicSymbol(
       layerId: layerId,
       graphicId: graphicId,
       symbol: symbol,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
@@ -283,7 +286,7 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.updateFeatureLayer(
       featureLayerId: featureLayerId,
       data: data,
@@ -294,7 +297,7 @@ class ArcgisMapWebController {
   bool destroyLayer({required String layerId}) {
     final view = _activeView;
     if (view == null) return false;
-    
+
     return _layerController.destroyLayer(
       layerId: layerId,
       view: view,
@@ -307,18 +310,19 @@ class ArcgisMapWebController {
   }) {
     final view = _activeView;
     if (view == null) return false;
-    
+
     return _layerController.polygonContainsPoint(
       polygonId: polygonId,
       pointCoordinates: pointCoordinates,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
   Future<void> setRotation(double angleDegrees) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.setRotation(
       angleDegrees: angleDegrees,
       view: view,
@@ -338,17 +342,18 @@ class ArcgisMapWebController {
   void addViewPadding({required ViewPadding padding}) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     _layerController.addViewPadding(
       padding: padding,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
   Future<void> toggleBaseMap({required BaseMap baseMap}) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.toggleBaseMap(
       baseMap: baseMap,
       view: view,
@@ -358,17 +363,18 @@ class ArcgisMapWebController {
   Future<void> setInteraction({required bool isEnabled}) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.setInteraction(
       isEnabled: isEnabled,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
   Future<void> retryLoad() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.retryLoad(view);
   }
 
@@ -378,31 +384,32 @@ class ArcgisMapWebController {
   List<Graphic> getGraphicsInView() {
     final view = _activeView;
     if (view == null) return [];
-    
+
     return _layerController.getGraphicsInView(view);
   }
 
   Stream<bool> isGraphicHoveredStream() {
     final view = _activeView;
     if (view == null) return Stream.value(false);
-    
+
     return _streamManager.isGraphicHoveredStream(view);
   }
 
   List<String> getVisibleGraphicIds() {
     final view = _activeView;
     if (view == null) return [];
-    
+
     return _layerController.getVisibleGraphicIds(view);
   }
 
   Future<void> updateIsAttributionTextVisible(bool isAttributionTextVisible) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
-    
+
     return _layerController.updateIsAttributionTextVisible(
       isAttributionTextVisible: isAttributionTextVisible,
       view: view,
+      isSceneView: _isSceneViewActive,
     );
   }
 
