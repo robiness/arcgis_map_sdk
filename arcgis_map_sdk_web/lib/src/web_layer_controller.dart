@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
-import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
+import 'package:arcgis_map_sdk_web/js_interop.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:web/web.dart' as web;
@@ -13,10 +13,10 @@ class WebLayerController {
   final int mapId;
 
   // Map instance for layer operations
-  late final JsMapEnhanced _map;
+  late final EsriMap _map;
 
   // Layer tracking
-  final Map<String, JsLayer> _layers = {};
+  final Map<String, JSObject> _layers = {};
   final List<Graphic> _graphicsInView = [];
 
   Future<void> initialize() async {
@@ -33,9 +33,9 @@ class WebLayerController {
     void Function(dynamic)? onPressed,
     String? url,
     void Function(double)? getZoom,
-    required JsView view,
+    required JSObject view,
   }) async {
-    final map = view.map as JsMapEnhanced;
+    final map = (view as MapView).map;
 
     // Create FeatureLayer properties
     final layerProperties = <String, dynamic>{
@@ -59,11 +59,11 @@ class WebLayerController {
     }
 
     final jsProperties = layerProperties.jsify() as JSObject;
-    final featureLayer = JsFeatureLayerEnhanced(jsProperties);
+    final featureLayer = JsFeatureLayer(jsProperties);
 
     // Add to map
-    map.add(featureLayer as JsLayer);
-    _layers[layerId] = featureLayer as JsLayer;
+    map.add(featureLayer as JSObject);
+    _layers[layerId] = featureLayer as JSObject;
 
     return FeatureLayer(
       id: layerId,
@@ -75,19 +75,19 @@ class WebLayerController {
     required String layerId,
     required GraphicsLayerOptions options,
     void Function(dynamic)? onPressed,
-    required JsView view,
+    required JSObject view,
   }) async {
-    final map = view.map as JsMapEnhanced;
+    final map = (view as MapView).map;
 
     final layerProperties = {
       'id': layerId,
     }.jsify() as JSObject;
 
-    final graphicsLayer = JsGraphicsLayerEnhanced(layerProperties);
+    final graphicsLayer = JsGraphicsLayer(layerProperties);
 
     // Add to map
-    map.add(graphicsLayer as JsLayer);
-    _layers[layerId] = graphicsLayer as JsLayer;
+    map.add(graphicsLayer as JSObject);
+    _layers[layerId] = graphicsLayer as JSObject;
 
     return GraphicsLayer(
       id: layerId,
@@ -98,20 +98,20 @@ class WebLayerController {
     required String layerId,
     required String url,
     required SceneLayerOptions options,
-    required JsView view,
+    required JSObject view,
   }) async {
-    final map = view.map as JsMapEnhanced;
+    final map = (view as SceneView).map;
 
     final layerProperties = {
       'id': layerId,
       'url': url,
     }.jsify() as JSObject;
 
-    final sceneLayer = JsSceneLayerEnhanced(layerProperties);
+    final sceneLayer = JsSceneLayer(layerProperties);
 
     // Add to map
-    map.add(sceneLayer as JsLayer);
-    _layers[layerId] = sceneLayer as JsLayer;
+    map.add(sceneLayer as JSObject);
+    _layers[layerId] = sceneLayer as JSObject;
 
     return SceneLayer(
       id: layerId,
@@ -123,10 +123,10 @@ class WebLayerController {
   Future<void> addGraphic({
     required String layerId,
     required Graphic graphic,
-    required JsView view,
+    required JSObject view,
   }) async {
     // Get the layer from the map
-    final map = view.map as JsMapEnhanced;
+    final map = (view as MapView).map;
     var layer = map.findLayerById(layerId.toJS);
 
     // If not found in current map, check if it's a FeatureLayer that needs to be treated as GraphicsLayer
@@ -146,24 +146,24 @@ class WebLayerController {
     }
 
     // Check layer type and handle accordingly
-    final layerType = layer.type;
+    final layerType = (layer as JSObject).type;
 
-    JsGraphicsLayerEnhanced? graphicsLayer;
-    JsFeatureLayerEnhanced? featureLayer;
+    JsGraphicsLayer? graphicsLayer;
+    JsFeatureLayer? featureLayer;
 
     if (layerType == 'graphics') {
-      graphicsLayer = JsGraphicsLayerEnhanced(layer as JSObject);
+      graphicsLayer = layer as JsGraphicsLayer;
     } else if (layerType == 'feature') {
-      featureLayer = JsFeatureLayerEnhanced(layer as JSObject);
+      featureLayer = layer as JsFeatureLayer;
     }
 
     // Convert Dart graphic to JS graphic
     final graphicData = graphic.toJson().jsify() as JSObject;
-    final jsGraphic = JsGraphicEnhanced(graphicData);
+    final jsGraphic = JsGraphic(graphicData);
 
     if (graphicsLayer != null) {
       // Handle GraphicsLayer - add directly
-      graphicsLayer.add(jsGraphic as JsGraphic);
+      graphicsLayer.add(jsGraphic);
     } else if (featureLayer != null) {
       // Handle FeatureLayer - use applyEdits
       final edits = {
@@ -183,10 +183,10 @@ class WebLayerController {
   Future<void> removeGraphic({
     required String layerId,
     required String objectId,
-    required JsView view,
+    required JSObject view,
   }) async {
     // Get the layer from the map instead of cached reference
-    final map = view.map as JsMapEnhanced;
+    final map = (view as MapView).map;
     final layer = map.findLayerById(layerId.toJS);
 
     if (layer == null) {
@@ -194,21 +194,27 @@ class WebLayerController {
     }
 
     // Cast to graphics layer and check type
-    final layerType = layer.type;
+    final layerType = (layer as JSObject).type;
     if (layerType != 'graphics') {
       throw Exception(
           'Layer $layerId is not a graphics layer (type: $layerType)');
     }
-    final graphicsLayer = JsGraphicsLayerEnhanced(layer as JSObject);
+    final graphicsLayer = layer as JsGraphicsLayer;
 
     // Find and remove the graphic with matching ID
     final graphics = graphicsLayer.graphics;
-    // Note: This is a simplified implementation
-    // In a full implementation, you'd iterate through graphics.items
-    // and find the one with matching objectId, then call remove()
+    final items = graphics.items as JSArray<JSObject>;
+
+    for (final graphic in items.toDart) {
+      final attributes = graphic['attributes'] as JSObject?;
+      if (attributes != null && attributes['id'] == objectId.toJS) {
+        graphicsLayer.remove(graphic);
+        break;
+      }
+    }
 
     // Remove from tracking
-    _graphicsInView.removeWhere((g) => g.getAttributesId() == objectId);
+    _graphicsInView.removeWhere((g) => g.attributes['id'] == objectId);
   }
 
   void removeGraphics({
@@ -217,17 +223,17 @@ class WebLayerController {
     String? removeByAttributeValue,
     String? excludeAttributeKey,
     List<String>? excludeAttributeValues,
-    required JsView view,
+    required JSObject view,
   }) {
     if (layerId != null) {
       // Get the layer from the map instead of cached reference
-      final map = view.map as JsMapEnhanced;
+      final map = (view as MapView).map;
       final layer = map.findLayerById(layerId.toJS);
 
       if (layer != null) {
         // Cast to enhanced type for access to removeAll method
-        if (layer.type == 'graphics') {
-          final graphicsLayer = JsGraphicsLayerEnhanced(layer as JSObject);
+        if ((layer as JSObject).type == 'graphics') {
+          final graphicsLayer = layer as JsGraphicsLayer;
           // For simplicity, remove all graphics if no specific criteria
           if (removeByAttributeKey == null) {
             graphicsLayer.removeAll();
@@ -240,8 +246,8 @@ class WebLayerController {
       // Remove from all graphics layers
       for (final layer in _layers.values) {
         // Cast to enhanced type for access to removeAll method
-        if (layer.type == 'graphics') {
-          final graphicsLayer = JsGraphicsLayerEnhanced(layer as JSObject);
+        if ((layer as JSObject).type == 'graphics') {
+          final graphicsLayer = layer as JsGraphicsLayer;
           graphicsLayer.removeAll();
         }
       }
@@ -257,7 +263,7 @@ class WebLayerController {
     int? threeDHeading,
     int? threeDTilt,
     AnimationOptions? animationOptions,
-    required JsView view,
+    required JSObject view,
     required bool isSceneView,
   }) async {
     final target = <String, dynamic>{
@@ -284,24 +290,18 @@ class WebLayerController {
         ? animationOptions.toMap().jsify() as JSObject
         : null;
 
-    // Use enhanced view types for better functionality
-    final mapView = view as JsMapViewEnhanced?;
-    final sceneView = view as JsSceneViewEnhanced?;
-
-    if (mapView != null) {
-      await mapView.goTo(jsTarget, options).toDart;
-    } else if (sceneView != null) {
-      await sceneView.goTo(jsTarget, options).toDart;
+    if (isSceneView) {
+      await (view as SceneView).goTo(jsTarget, options).toDart;
     } else {
-      // Fallback to generic view
-      await (view as JsView).goTo(jsTarget, options).toDart;
+      await (view as MapView).goTo(jsTarget, options).toDart;
     }
   }
 
   Future<void> moveCameraToPoints({
     required List<LatLng> points,
     double? padding,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) async {
     if (points.isEmpty) return;
 
@@ -332,27 +332,21 @@ class WebLayerController {
     final options =
         padding != null ? {'padding': padding}.jsify() as JSObject : null;
 
-    // Use enhanced view types for better functionality
-    final mapView = view as JsMapViewEnhanced?;
-    final sceneView = view as JsSceneViewEnhanced?;
-
-    if (mapView != null) {
-      await mapView.goTo(target, options).toDart;
-    } else if (sceneView != null) {
-      await sceneView.goTo(target, options).toDart;
+    if (isSceneView) {
+      await (view as SceneView).goTo(target, options).toDart;
     } else {
-      // Fallback to generic view
-      await (view as JsView).goTo(target, options).toDart;
+      await (view as MapView).goTo(target, options).toDart;
     }
   }
 
   Future<bool> zoomIn({
     required int lodFactor,
     AnimationOptions? animationOptions,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) async {
     try {
-      final currentZoom = view.zoom;
+      final currentZoom = (view as MapView).zoom;
       final newZoom = currentZoom + lodFactor;
 
       final target = {'zoom': newZoom}.jsify() as JSObject;
@@ -361,17 +355,10 @@ class WebLayerController {
           ? animationOptions.toMap().jsify() as JSObject
           : null;
 
-      // Use enhanced view types for better functionality
-      final mapView = view as JsMapViewEnhanced?;
-      final sceneView = view as JsSceneViewEnhanced?;
-
-      if (mapView != null) {
-        await mapView.goTo(target, options).toDart;
-      } else if (sceneView != null) {
-        await sceneView.goTo(target, options).toDart;
+      if (isSceneView) {
+        await (view as SceneView).goTo(target, options).toDart;
       } else {
-        // Fallback to generic view
-        await (view as JsView).goTo(target, options).toDart;
+        await (view as MapView).goTo(target, options).toDart;
       }
       return true;
     } catch (e) {
@@ -383,10 +370,11 @@ class WebLayerController {
   Future<bool> zoomOut({
     required int lodFactor,
     AnimationOptions? animationOptions,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) async {
     try {
-      final currentZoom = view.zoom;
+      final currentZoom = (view as MapView).zoom;
       final newZoom = currentZoom - lodFactor;
 
       final target = {'zoom': newZoom}.jsify() as JSObject;
@@ -395,17 +383,10 @@ class WebLayerController {
           ? animationOptions.toMap().jsify() as JSObject
           : null;
 
-      // Use enhanced view types for better functionality
-      final mapView = view as JsMapViewEnhanced?;
-      final sceneView = view as JsSceneViewEnhanced?;
-
-      if (mapView != null) {
-        await mapView.goTo(target, options).toDart;
-      } else if (sceneView != null) {
-        await sceneView.goTo(target, options).toDart;
+      if (isSceneView) {
+        await (view as SceneView).goTo(target, options).toDart;
       } else {
-        // Fallback to generic view
-        await (view as JsView).goTo(target, options).toDart;
+        await (view as MapView).goTo(target, options).toDart;
       }
       return true;
     } catch (e) {
@@ -416,30 +397,21 @@ class WebLayerController {
 
   // Export and Screenshot
 
-  Future<Uint8List> exportImage(JsView view) async {
+  Future<Uint8List> exportImage(JSObject view, {required bool isSceneView}) async {
     try {
-      // Use enhanced view types for screenshot functionality
-      final mapView = view as JsMapViewEnhanced?;
-      final sceneView = view as JsSceneViewEnhanced?;
-
       JSPromise<JSObject> screenshotPromise;
 
-      if (mapView != null) {
-        screenshotPromise = mapView.takeScreenshot();
-      } else if (sceneView != null) {
-        screenshotPromise = sceneView.takeScreenshot();
+      if (isSceneView) {
+        screenshotPromise = (view as SceneView).takeScreenshot();
       } else {
-        throw Exception('View type does not support screenshot functionality');
+        screenshotPromise = (view as MapView).takeScreenshot();
       }
 
       final screenshotResult = await screenshotPromise.toDart;
+      final dataUrl = screenshotResult['dataUrl'] as JSString;
+      final base64Data = dataUrl.toDart.split(',')[1];
 
-      // For now, return empty data as this requires complex JS interop
-      // to extract the actual image data from the screenshot result
-      // In a full implementation, you would access screenshotResult.dataUrl
-      // and convert the base64 data to Uint8List
-      print('Screenshot taken successfully (placeholder implementation)');
-      return Uint8List(0);
+      return base64Decode(base64Data);
     } catch (e) {
       print('Error exporting image: $e');
       rethrow;
@@ -469,11 +441,28 @@ class WebLayerController {
     required String layerId,
     required String graphicId,
     required Symbol symbol,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) {
-    // Implementation would find the graphic and update its symbol
-    print(
-        'updateGraphicSymbol not fully implemented - use removeGraphic/addGraphic instead');
+    final map = isSceneView ? (view as SceneView).map : (view as MapView).map;
+
+    for (final layer in _layers.values) {
+      final jsLayer = layer as JSObject;
+      if (jsLayer.type == 'graphics' && jsLayer.id == layerId) {
+        final graphicsLayer = jsLayer as JsGraphicsLayer;
+        final graphics = graphicsLayer.graphics;
+        final items = graphics.items as JSArray<JSObject>;
+
+        for (final graphic in items.toDart) {
+          final attributes = graphic['attributes'] as JSObject?;
+          if (attributes != null && attributes['id'] == graphicId.toJS) {
+            final newSymbol = symbol.toJson().jsify() as JSObject;
+            (graphic as JsGraphic).symbol = newSymbol;
+            return;
+          }
+        }
+      }
+    }
   }
 
   Future<void> updateFeatureLayer({
@@ -488,11 +477,11 @@ class WebLayerController {
 
   bool destroyLayer({
     required String layerId,
-    required JsView view,
+    required JSObject view,
   }) {
     try {
       // Get the layer from the map instead of cached reference
-      final map = view.map as JsMapEnhanced;
+      final map = (view as MapView).map;
       final layer = map.findLayerById(layerId.toJS);
       if (layer == null) return false;
 
@@ -500,13 +489,7 @@ class WebLayerController {
       map.remove(layer);
 
       // Destroy the layer
-      if (layer is JsGraphicsLayerEnhanced) {
-        layer.destroy();
-      } else if (layer is JsFeatureLayerEnhanced) {
-        layer.destroy();
-      } else if (layer is JsSceneLayerEnhanced) {
-        layer.destroy();
-      }
+      (layer as JSObject).destroy();
 
       // Remove from tracking
       _layers.remove(layerId);
@@ -521,35 +504,51 @@ class WebLayerController {
   bool polygonContainsPoint({
     required String polygonId,
     required LatLng pointCoordinates,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) {
-    // This would require complex geometry operations with ArcGIS JS API
-    // For now, return false as placeholder
-    print(
-        'polygonContainsPoint not fully implemented - requires geometry analysis');
+    final map = isSceneView ? (view as SceneView).map : (view as MapView).map;
+
+    for (final layer in _layers.values) {
+      final jsLayer = layer as JSObject;
+      if (jsLayer.type == 'graphics') {
+        final graphicsLayer = jsLayer as JsGraphicsLayer;
+        final graphics = graphicsLayer.graphics;
+        final items = graphics.items as JSArray<JSObject>;
+
+        for (final graphic in items.toDart) {
+          final attributes = graphic['attributes'] as JSObject?;
+          if (attributes != null && attributes['id'] == polygonId.toJS) {
+            final polygon = graphic['geometry'] as Polygon;
+            final point = Point(
+              {
+                'latitude': pointCoordinates.latitude,
+                'longitude': pointCoordinates.longitude,
+              }.jsify() as JSObject,
+            );
+            return polygon.contains(point);
+          }
+        }
+      }
+    }
+
     return false;
   }
 
   Future<void> setRotation({
     required double angleDegrees,
-    required JsView view,
+    required JSObject view,
     required bool isSceneView,
   }) async {
-    // Cast to enhanced types for access to specific properties
-    final sceneView = view as JsSceneViewEnhanced?;
-    final mapView = view as JsMapViewEnhanced?;
-
-    if (isSceneView && sceneView != null) {
+    if (isSceneView) {
       // For SceneView, set camera heading
-      final camera = sceneView.camera as JsCameraEnhanced;
-      final newCamera = JsCameraEnhanced({
-        'position': camera.position,
-        'heading': angleDegrees,
-        'tilt': camera.tilt,
-      }.jsify() as JSObject);
-      sceneView.camera = newCamera as JsCamera;
-    } else if (mapView != null) {
+      final sceneView = view as SceneView;
+      final camera = sceneView.camera;
+      camera.heading = angleDegrees;
+      sceneView.camera = camera;
+    } else {
       // For MapView, set viewpoint rotation
+      final mapView = view as MapView;
       final viewpoint = mapView.viewpoint;
       viewpoint.rotation = angleDegrees;
       mapView.viewpoint = viewpoint;
@@ -563,7 +562,8 @@ class WebLayerController {
 
   void addViewPadding({
     required ViewPadding padding,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) {
     final paddingObject = {
       'left': padding.left,
@@ -572,91 +572,83 @@ class WebLayerController {
       'bottom': padding.bottom,
     }.jsify() as JSObject;
 
-    if (view is JsMapViewEnhanced) {
-      view.padding = paddingObject;
-    } else if (view is JsSceneViewEnhanced) {
-      view.padding = paddingObject;
+    if (isSceneView) {
+      (view as SceneView).padding = paddingObject;
+    } else {
+      (view as MapView).padding = paddingObject;
     }
   }
 
   Future<void> toggleBaseMap({
     required BaseMap baseMap,
-    required JsView view,
+    required JSObject view,
   }) async {
-    final map = view.map as JsMapEnhanced;
+    final map = (view as MapView).map;
     map.basemap = baseMap.value;
   }
 
   Future<void> setInteraction({
     required bool isEnabled,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) async {
-    final mapView = view as JsMapViewEnhanced?;
-    final sceneView = view as JsSceneViewEnhanced?;
-
-    if (mapView != null) {
-      final navigation = mapView.navigation as JsNavigation;
+    if (isSceneView) {
+      final navigation = (view as SceneView).navigation;
       navigation.enabled = isEnabled;
-    } else if (sceneView != null) {
-      final navigation = sceneView.navigation as JsNavigation;
+    } else {
+      final navigation = (view as MapView).navigation;
       navigation.enabled = isEnabled;
     }
   }
 
-  Future<void> retryLoad(JsView view) async {
+  Future<void> retryLoad(JSObject view) async {
     // Refresh/reload the map and its layers
-    final map = view.map as JsMapEnhanced;
+    final map = (view as MapView).map;
 
     // Reload all layers
     for (final layer in _layers.values) {
-      final featureLayer = layer as JsFeatureLayerEnhanced?;
-      final sceneLayer = layer as JsSceneLayerEnhanced?;
-
-      if (featureLayer != null) {
-        await featureLayer.load().toDart;
-      } else if (sceneLayer != null) {
-        await sceneLayer.load().toDart;
+      final jsLayer = layer as JSObject;
+      if (jsLayer.type == 'feature') {
+        await (jsLayer as JsFeatureLayer).load().toDart;
+      } else if (jsLayer.type == 'scene') {
+        await (jsLayer as JsSceneLayer).load().toDart;
       }
     }
 
     print('Retry load completed for mapId: $mapId');
   }
 
-  List<Graphic> getGraphicsInView(JsView view) {
+  List<Graphic> getGraphicsInView(JSObject view) {
     // Return cached graphics for performance
     return _graphicsInView;
   }
 
-  List<String> getVisibleGraphicIds(JsView view) {
+  List<String> getVisibleGraphicIds(JSObject view) {
     // Extract IDs from visible graphics
     return _graphicsInView
-        .map((g) => g.getAttributesId() ?? '')
+        .map((g) => g.attributes['id'] as String)
         .where((id) => id.isNotEmpty)
         .toList();
   }
 
   Future<void> updateIsAttributionTextVisible({
     required bool isAttributionTextVisible,
-    required JsView view,
+    required JSObject view,
+    required bool isSceneView,
   }) async {
-    final mapView = view as JsMapViewEnhanced?;
-    final sceneView = view as JsSceneViewEnhanced?;
-
-    if (mapView != null) {
-      final ui = mapView.ui;
+    if (isSceneView) {
+      final ui = (view as SceneView).ui;
       if (isAttributionTextVisible) {
-        // Add attribution if not present
-        // This would need proper UI widget management
+        ui.add('attribution', 'bottom-right');
       } else {
-        // Remove attribution
-        // This would need proper UI widget management
+        ui.remove('attribution');
       }
-    } else if (sceneView != null) {
-      final ui = sceneView.ui;
+    } else {
+      final ui = (view as MapView).ui;
       if (isAttributionTextVisible) {
-        // Add attribution if not present
+        ui.add('attribution', 'bottom-right');
       } else {
-        // Remove attribution
+        ui.remove('attribution');
       }
     }
   }

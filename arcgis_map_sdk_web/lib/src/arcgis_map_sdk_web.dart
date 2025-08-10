@@ -720,11 +720,15 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       {required String polygonId,
       required LatLng pointCoordinates,
       required int mapId}) {
-    // Web implementation - would require complex geometry operations with ArcGIS JS API
-    // Return false for now as this requires geometric analysis
-    print(
-        'polygonContainsPoint not fully implemented for web - requires geometry analysis');
-    return false;
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    return controller.polygonContainsPoint(
+      polygonId: polygonId,
+      pointCoordinates: pointCoordinates,
+    );
   }
 
   @override
@@ -1154,9 +1158,16 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       required String layerId,
       required String graphicId,
       required Symbol symbol}) {
-    // Web implementation - would require finding and updating specific graphic
-    print(
-        'updateGraphicSymbol not fully implemented - use removeGraphic/addGraphic instead');
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    controller.updateGraphicSymbol(
+      layerId: layerId,
+      graphicId: graphicId,
+      symbol: symbol,
+    );
   }
 
   @override
