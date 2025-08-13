@@ -317,28 +317,32 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
     // Get initial bounds
     final extent = view.extent;
-    final initialBounds = BoundingBox(
-      height: extent.height,
-      width: extent.width,
-      topRight: LatLng(extent.center.latitude + (extent.height / 2),
-          extent.center.longitude + (extent.width / 2)),
-      lowerLeft: LatLng(extent.center.latitude - (extent.height / 2),
-          extent.center.longitude - (extent.width / 2)),
-    );
-    controller.add(initialBounds);
+    if (extent != null) {
+      final initialBounds = BoundingBox(
+        height: extent.height,
+        width: extent.width,
+        topRight: LatLng(extent.center.latitude + (extent.height / 2),
+            extent.center.longitude + (extent.width / 2)),
+        lowerLeft: LatLng(extent.center.latitude - (extent.height / 2),
+            extent.center.longitude - (extent.width / 2)),
+      );
+      controller.add(initialBounds);
+    }
 
     // Watch for extent changes
     final extentHandler = (JSObject event) {
       final newExtent = view.extent;
-      final newBounds = BoundingBox(
-        height: newExtent.height,
-        width: newExtent.width,
-        topRight: LatLng(newExtent.center.latitude + (newExtent.height / 2),
-            newExtent.center.longitude + (newExtent.width / 2)),
-        lowerLeft: LatLng(newExtent.center.latitude - (newExtent.height / 2),
-            newExtent.center.longitude - (newExtent.width / 2)),
-      );
-      controller.add(newBounds);
+      if (newExtent != null) {
+        final newBounds = BoundingBox(
+          height: newExtent.height,
+          width: newExtent.width,
+          topRight: LatLng(newExtent.center.latitude + (newExtent.height / 2),
+              newExtent.center.longitude + (newExtent.width / 2)),
+          lowerLeft: LatLng(newExtent.center.latitude - (newExtent.height / 2),
+              newExtent.center.longitude - (newExtent.width / 2)),
+        );
+        controller.add(newBounds);
+      }
     }.toJS as JSFunction;
 
     final eventArray = ['extent'.toJS].toJS;
@@ -750,8 +754,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       if (graphics != null) {
         final items = graphics['items'] as JSArray?;
         if (items != null) {
-          for (int i = 0; i < items.length; i++) {
-            final graphic = items[i] as JSObject;
+          for (int i = 0; i < items.toDart.length; i++) {
+            final graphic = items.toDart[i] as JSObject;
             final attributes = graphic['attributes'] as JSObject?;
             if (attributes != null && attributes['id'] == graphicId.toJS) {
               enhancedLayer.remove(graphic as JsGraphic);
@@ -790,8 +794,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           final items = graphics['items'] as JSArray?;
           if (items != null) {
             final graphicsToRemove = <JsGraphic>[];
-            for (int i = 0; i < items.length; i++) {
-              final graphic = items[i] as JSObject;
+            for (int i = 0; i < items.toDart.length; i++) {
+              final graphic = items.toDart[i] as JSObject;
               final attributes = graphic['attributes'] as JSObject?;
               if (attributes != null) {
                 bool shouldRemove = true;
@@ -833,8 +837,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         final layerItems = layers['items'] as JSArray?;
         
         if (layerItems != null) {
-          for (int layerIndex = 0; layerIndex < layerItems.length; layerIndex++) {
-            final layer = layerItems[layerIndex] as JSObject;
+          for (int layerIndex = 0; layerIndex < layerItems.toDart.length; layerIndex++) {
+            final layer = layerItems.toDart[layerIndex] as JSObject;
             final layerType = layer['type'] as JSString?;
             
             if (layerType?.toDart == 'graphics') {
@@ -844,8 +848,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
                 final items = graphics['items'] as JSArray?;
                 if (items != null) {
                   final graphicsToRemove = <JsGraphic>[];
-                  for (int i = 0; i < items.length; i++) {
-                    final graphic = items[i] as JSObject;
+                  for (int i = 0; i < items.toDart.length; i++) {
+                    final graphic = items.toDart[i] as JSObject;
                     final attributes = graphic['attributes'] as JSObject?;
                     if (attributes != null) {
                       bool shouldRemove = true;
@@ -901,8 +905,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final layerItems = layers['items'] as JSArray?;
       
       if (layerItems != null) {
-        for (int i = 0; i < layerItems.length; i++) {
-          final layer = layerItems[i] as JSObject;
+        for (int i = 0; i < layerItems.toDart.length; i++) {
+          final layer = layerItems.toDart[i] as JSObject;
           // Try to call refresh or load methods if available
           final refreshMethod = layer['refresh'] as JSFunction?;
           final loadMethod = layer['load'] as JSFunction?;

@@ -253,7 +253,7 @@ extension type JsGraphic._(JSObject _) implements JSObject {
 @JS("esri.geometry.Geometry")
 extension type JsGeometry._(JSObject _) implements JSObject {
   /// https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Geometry.html#extent
-  external JsExtent get extent;
+  external JsExtent? get extent;
 }
 //
 /// https://developers.arcgis.com/javascript/latest/api-reference/esri-Graphic.html#attributes
@@ -317,7 +317,7 @@ extension type JsView._(JSObject _) implements JSObject {
 
   external set container(JSObject? value);
 
-  external JsExtent get extent;
+  external JsExtent? get extent;
 
   external JsEsriMap get map;
 }
@@ -501,7 +501,7 @@ extension type JsMapViewEnhanced._(JSObject _) implements JsView {
 
   external set container(JSObject? value);
 
-  external JsExtent get extent;
+  external JsExtent? get extent;
 
   external JsPoint get center;
 
@@ -561,7 +561,7 @@ extension type JsSceneViewEnhanced._(JSObject _) implements JsView {
 
   external set container(JSObject? value);
 
-  external JsExtent get extent;
+  external JsExtent? get extent;
 
   external JsPoint get center;
 
