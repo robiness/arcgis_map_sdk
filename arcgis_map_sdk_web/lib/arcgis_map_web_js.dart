@@ -26,6 +26,14 @@ external void requireConfig(JSObject config);
 @JS('window._arcgisModulesReady')
 external JSAny? get arcgisModulesReady;
 
+/// Access to ArcGIS esri global object
+@JS('esri')
+external JSObject get esri;
+
+/// Access to ArcGIS esriConfig global object
+@JS('esriConfig')
+external JSObject get esriConfig;
+
 /// Set property on JavaScript object
 @JS('Object.defineProperty')
 external void defineProperty(JSObject obj, JSString name, JSObject descriptor);

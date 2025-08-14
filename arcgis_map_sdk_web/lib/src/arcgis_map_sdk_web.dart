@@ -23,6 +23,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static final Map<int, bool> _isSceneViewActive = {};
   static final Map<int, Future Function(MethodCall)> _methodCallHandlers = {};
   static final Map<int, StreamController<Attributes?>> _clickControllers = {};
+  
+  // Store mapOptions for each map instance
+  static final Map<int, ArcgisMapOptions> _mapOptions = {};
+  
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
   static final Set<String> _registeredViewTypes = {};
@@ -157,6 +161,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       required PlatformViewCreatedCallback onPlatformViewCreated,
       required ArcgisMapOptions mapOptions}) {
     print('buildView called with creationId: $creationId');
+    
+    // Store mapOptions for later use during initialization
+    _mapOptions[creationId] = mapOptions;
+    print('Stored mapOptions for creationId: $creationId, apiKey: ${mapOptions.apiKey != null ? '[PROVIDED]' : '[NULL]'}');
 
     final viewType = 'arcgis-map-$creationId';
 
@@ -265,6 +273,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _isSceneViewActive.remove(mapId);
       _methodCallHandlers.remove(mapId);
       _clickControllers.remove(mapId);
+      _mapOptions.remove(mapId);
 
       print('Disposed map resources for mapId: $mapId');
     } catch (e) {
@@ -387,10 +396,30 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       print(
           'Starting map initialization for mapId: $mapId using new architecture');
 
+      // Get the stored mapOptions for this mapId
+      final mapOptions = _mapOptions[mapId];
+      if (mapOptions == null) {
+        throw Exception('MapOptions not found for mapId: $mapId. Make sure buildView was called first.');
+      }
+
       // Wait for ArcGIS API to be loaded
       print('Waiting for ArcGIS API...');
       await _waitForArcGISAPI();
       print('ArcGIS API loaded successfully');
+      
+      // Configure global API key if provided
+      if (mapOptions.apiKey != null && mapOptions.apiKey!.isNotEmpty) {
+        print('Configuring global API key for ArcGIS services');
+        try {
+          // Set the global API key in esriConfig
+          esriConfig['apiKey'] = mapOptions.apiKey!.toJS;
+          print('Global API key configured successfully: ${mapOptions.apiKey!.substring(0, 8)}...');
+        } catch (e) {
+          print('Warning: Failed to set global API key: $e');
+        }
+      } else {
+        print('No API key provided in mapOptions');
+      }
 
       // Create and initialize the new web controller
       final controller = await ArcgisMapWebController.init(mapId);
@@ -543,12 +572,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         'esri/layers/SceneLayer',
         'esri/layers/GraphicsLayer',
         'esri/layers/FeatureLayer',
-        'esri/Graphic'
+        'esri/Graphic',
+        'esri/config'
       ];
       
       // Create callback function using Function constructor (safer than eval)
       final callback = createFunction('''
-        return function(Map, MapView, SceneView, Attribution, SceneLayer, GraphicsLayer, FeatureLayer, Graphic) {
+        return function(Map, MapView, SceneView, Attribution, SceneLayer, GraphicsLayer, FeatureLayer, Graphic, esriConfig) {
           console.log("ArcGIS modules loaded via AMD");
           
           // Expose modules globally with proper nested structure for Dart interop
@@ -566,7 +596,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
               GraphicsLayer: GraphicsLayer,
               FeatureLayer: FeatureLayer
             },
-            Graphic: Graphic
+            Graphic: Graphic,
+            config: esriConfig
           };
           
           // Expose constructors directly for easier Dart interop access
@@ -574,10 +605,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           window.GraphicsLayer = GraphicsLayer;
           window.FeatureLayer = FeatureLayer;
           window.Graphic = Graphic;
+          window.esriConfig = esriConfig;
           
           // Signal that modules are ready
           window._arcgisModulesReady = true;
-          console.log("ArcGIS modules exposed globally, including Graphic, SceneLayer, GraphicsLayer, and FeatureLayer");
+          console.log("ArcGIS modules exposed globally, including Graphic, SceneLayer, GraphicsLayer, FeatureLayer, and esriConfig");
         };
       '''.toJS).callAsFunction() as JSFunction;
       
