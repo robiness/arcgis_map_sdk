@@ -211,17 +211,17 @@ class WebStreamManager {
         final graphic = firstResult.graphic;
 
         if (graphic != null) {
-          final attributes = graphic.attributes as JsAttributes?;
-          if (attributes != null) {
-            // Convert JSObject attributes to Dart Attributes
-            // This is a simplified conversion
-            final dartAttributes = Attributes({
-              'id': attributes.id ?? '',
-              // Add other attribute conversions as needed
-            });
-            controller.add(dartAttributes);
-            return;
-          }
+          // final attributes = graphic.attributes as JsAttributes?;
+          // if (attributes != null) {
+          //   // Convert JSObject attributes to Dart Attributes
+          //   // This is a simplified conversion
+          //   final dartAttributes = Attributes({
+          //     'id': attributes.id ?? '',
+          //     // Add other attribute conversions as needed
+          //   });
+          //   controller.add(dartAttributes);
+          //   return;
+          // }
         }
       }
 

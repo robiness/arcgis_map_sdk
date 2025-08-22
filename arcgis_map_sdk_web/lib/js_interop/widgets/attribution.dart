@@ -1,3 +1,8 @@
+/// ArcGIS Maps SDK for JavaScript - Attribution widget
+/// 
+/// Contains the Attribution widget for displaying map attribution text.
+/// 
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Attribution.html
 import 'dart:js_interop';
 
 /// Attribution widget for displaying map attribution text

@@ -1,19 +1,16 @@
-import 'dart:js_interop';
+/// ArcGIS Maps SDK for JavaScript - Legacy polygon definitions
+/// 
+/// ⚠️ DEPRECATED: This file contains duplicate geometry definitions.
+/// Use the geometry types from '../geometry/' instead:
+/// - JsPolygon for polygon geometry
+/// - JsPoint for point geometry
+/// 
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Polygon.html
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Point.html
+import 'package:arcgis_map_sdk_web/js_interop/geometry/polygon.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';
 
-@JS('esri.geometry.Polygon')
-extension type Polygon._(JSObject _) implements JSObject {
-  external factory Polygon(JSObject properties);
-
-  external bool contains(JSObject point);
-}
-
-@JS('esri.geometry.Point')
-extension type Point._(JSObject _) implements JSObject {
-  external factory Point(JSObject properties);
-
-  external double get latitude;
-  external set latitude(double value);
-
-  external double get longitude;
-  external set longitude(double value);
-}
+// Re-export the proper geometry types from the organized structure
+// This maintains backwards compatibility while encouraging migration to the correct types
+typedef Polygon = JsPolygon;
+typedef Point = JsPoint;

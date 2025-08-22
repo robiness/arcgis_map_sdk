@@ -1,8 +1,17 @@
+/// ArcGIS Maps SDK for JavaScript - Map and MapView classes
+/// 
+/// Contains 2D map and view implementations for the ArcGIS JS API.
+/// 
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-Map.html
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
-
-import 'definitions.dart';
+import 'package:arcgis_map_sdk_web/js_interop/core/collection.dart';
+import 'package:arcgis_map_sdk_web/js_interop/core/handles.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/extent.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/camera.dart';
 
 /// Base view interface
 @JS("esri.views.View")
@@ -106,7 +115,7 @@ extension type JsDefaultUI._(JSObject _) implements JSObject {
 }
 
 /// Navigation control for views
-@JS()
+@JS("esri.views.navigation.Navigation")
 extension type JsNavigation._(JSObject _) implements JSObject {
   external bool get enabled;
   external set enabled(bool value);
@@ -117,7 +126,7 @@ extension type JsNavigation._(JSObject _) implements JSObject {
 }
 
 /// View constraints
-@JS()
+@JS("esri.views.ViewConstraints")
 extension type JsViewConstraints._(JSObject _) implements JSObject {
   external JSObject? get geometry;
   external set geometry(JSObject? value);

@@ -1,6 +1,15 @@
+/// ArcGIS Maps SDK for JavaScript - SceneView classes
+/// 
+/// Contains 3D scene view implementations for the ArcGIS JS API.
+/// 
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-views-SceneView.html
 import 'dart:js_interop';
-import 'definitions.dart';
-import 'arcgis_map.dart';
+
+import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';
+import 'package:arcgis_map_sdk_web/js_interop/core/handles.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/extent.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/camera.dart';
 
 /// SceneView (3D) with complete API
 @JS("esri.views.SceneView")
@@ -51,7 +60,7 @@ extension type JsSceneView._(JSObject _) implements JsView {
 }
 
 /// Environment settings for SceneView
-@JS()
+@JS("esri.views.SceneView.Environment")
 extension type JsEnvironment._(JSObject _) implements JSObject {
   external JSObject get lighting;
   external set lighting(JSObject value);

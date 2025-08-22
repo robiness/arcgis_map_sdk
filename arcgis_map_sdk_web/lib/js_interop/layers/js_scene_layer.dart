@@ -1,5 +1,11 @@
+/// ArcGIS Maps SDK for JavaScript - SceneLayer class
+/// 
+/// Contains the SceneLayer class for displaying 3D scene data.
+/// 
+/// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-SceneLayer.html
 import 'dart:js_interop';
-import '../arcgis_map.dart';
+
+import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';
 
 /// Scene Layer with complete API
 @JS("esri.layers.SceneLayer")
