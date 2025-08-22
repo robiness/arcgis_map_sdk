@@ -4,7 +4,7 @@ import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
-import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
+import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:flutter/services.dart';
@@ -18,8 +18,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static final Map<int, ArcgisMapWebController> _controllers = {};
 
   // Keep view tracking for backwards compatibility
-  static final Map<int, JsMapViewEnhanced> _mapViews = {};
-  static final Map<int, JsSceneViewEnhanced> _sceneViews = {};
+  static final Map<int, JsMapView> _mapViews = {};
+  static final Map<int, JsSceneView> _sceneViews = {};
   static final Map<int, bool> _isSceneViewActive = {};
   static final Map<int, Future Function(MethodCall)> _methodCallHandlers = {};
   static final Map<int, StreamController<Attributes?>> _clickControllers = {};
@@ -224,10 +224,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Find and remove the layer
-      final layer = view.map.findLayerById(layerId.toJS) as JsLayer?;
+      final layer = view.map.findLayerById(layerId) as JsLayer?;
       if (layer != null) {
         // Remove from map using enhanced API
-        final enhancedMap = view.map as JsMapEnhanced;
+        final enhancedMap = view.map as JsEsriMap;
         enhancedMap.remove(layer);
 
         // Destroy the layer
@@ -290,10 +290,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       // Use takeScreenshot method directly from enhanced view types
       JSPromise<JSObject> screenshotPromise;
       if (_isSceneViewActive[mapId]!) {
-        final enhancedView = view as JsSceneViewEnhanced;
+        final enhancedView = view as JsSceneView;
         screenshotPromise = enhancedView.takeScreenshot();
       } else {
-        final enhancedView = view as JsMapViewEnhanced;
+        final enhancedView = view as JsMapView;
         screenshotPromise = enhancedView.takeScreenshot();
       }
       
@@ -430,7 +430,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final mapProperties2D = {
         'basemap': 'streets-navigation-vector'.toJS,
       }.jsify()! as JSObject;
-      final map2D = JsMapEnhanced(mapProperties2D);
+      final map2D = JsEsriMap(mapProperties2D);
 
       // Wait for the container div to be created by Flutter
       print('Looking for container: map-$mapId');
@@ -455,7 +455,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         'zoom': 2.toJS,
         'center': [-118.805, 34.027].map((n) => n.toJS).toList().toJS,
       }.jsify()! as JSObject;
-      final mapView = JsMapViewEnhanced(mapViewProperties);
+      final mapView = JsMapView(mapViewProperties);
       print('2D Map view created successfully');
 
       print('Creating enhanced 3D scene view...');
@@ -463,7 +463,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         'basemap': 'topo-3d'.toJS,
         'ground': 'world-elevation'.toJS,
       }.jsify()! as JSObject;
-      final map3D = JsMapEnhanced(mapProperties3D);
+      final map3D = JsEsriMap(mapProperties3D);
 
       final sceneViewProperties = {
         'container': null, // Will be set when switching to 3D
@@ -479,7 +479,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           'tilt': 0.49.toJS,
         }.jsify(),
       }.jsify()! as JSObject;
-      final sceneView = JsSceneViewEnhanced(sceneViewProperties);
+      final sceneView = JsSceneView(sceneViewProperties);
       print('3D Scene view created successfully');
 
       // Store views for backwards compatibility
@@ -775,13 +775,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Find the graphics layer
-      final layer = view.map.findLayerById(layerId.toJS) as JsGraphicsLayer?;
+      final layer = view.map.findLayerById(layerId) as JsGraphicsLayer?;
       if (layer == null) {
         throw Exception('Graphics layer with id $layerId not found');
       }
 
       // Find and remove the graphic using direct API calls
-      final enhancedLayer = layer as JsGraphicsLayerEnhanced;
+      final enhancedLayer = layer as JsGraphicsLayer;
       final graphics = enhancedLayer.graphics;
       if (graphics != null) {
         final items = graphics['items'] as JSArray?;
@@ -816,11 +816,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       if (layerId != null) {
         // Remove graphics from specific layer
-        final layer = view.map.findLayerById(layerId.toJS) as JsGraphicsLayer?;
+        final layer = view.map.findLayerById(layerId) as JsGraphicsLayer?;
         if (layer == null) return;
 
         // Remove graphics using direct API calls with filtering logic
-        final enhancedLayer = layer as JsGraphicsLayerEnhanced;
+        final enhancedLayer = layer as JsGraphicsLayer;
         final graphics = enhancedLayer.graphics;
         if (graphics != null) {
           final items = graphics['items'] as JSArray?;
@@ -864,7 +864,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         }
       } else {
         // Remove from all graphics layers using direct API calls
-        final enhancedMap = view.map as JsMapEnhanced;
+        final enhancedMap = view.map as JsEsriMap;
         final layers = enhancedMap.layers;
         final layerItems = layers['items'] as JSArray?;
         
@@ -874,7 +874,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
             final layerType = layer['type'] as JSString?;
             
             if (layerType?.toDart == 'graphics') {
-              final enhancedLayer = layer as JsGraphicsLayerEnhanced;
+              final enhancedLayer = layer as JsGraphicsLayer;
               final graphics = enhancedLayer.graphics;
               if (graphics != null) {
                 final items = graphics['items'] as JSArray?;
@@ -932,7 +932,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Refresh/reload the map and its layers using direct API calls
-      final enhancedMap = view.map as JsMapEnhanced;
+      final enhancedMap = view.map as JsEsriMap;
       final layers = enhancedMap.layers;
       final layerItems = layers['items'] as JSArray?;
       
@@ -985,10 +985,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
     // Set navigation interaction using direct property access
     if (_isSceneViewActive[mapId]!) {
-      final enhancedView = view as JsSceneViewEnhanced;
+      final enhancedView = view as JsSceneView;
       (enhancedView.navigation as dynamic).enabled = isEnabled;
     } else {
-      final enhancedView = view as JsMapViewEnhanced;
+      final enhancedView = view as JsMapView;
       (enhancedView.navigation as dynamic).enabled = isEnabled;
     }
 
@@ -1168,7 +1168,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final basemapId = baseMap.value;
 
       // Change basemap using direct property assignment
-      final enhancedMap = view.map as JsMapEnhanced;
+      final enhancedMap = view.map as JsEsriMap;
       enhancedMap.basemap = basemapId;
 
       print('Basemap changed to: $basemapId');
@@ -1215,7 +1215,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       // Update attribution visibility using direct UI API access
       if (_isSceneViewActive[mapId]!) {
-        final enhancedView = view as JsSceneViewEnhanced;
+        final enhancedView = view as JsSceneView;
         final ui = enhancedView.ui;
         if (isAttributionTextVisible) {
           ui.add('attribution'.toJS as JSObject, 'bottom-right'.toJS);
@@ -1223,7 +1223,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           ui.remove('attribution'.toJS as JSObject);
         }
       } else {
-        final enhancedView = view as JsMapViewEnhanced;
+        final enhancedView = view as JsMapView;
         final ui = enhancedView.ui;
         if (isAttributionTextVisible) {
           ui.add('attribution'.toJS as JSObject, 'bottom-right'.toJS);

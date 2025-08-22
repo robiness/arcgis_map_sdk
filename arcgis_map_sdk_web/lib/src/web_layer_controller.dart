@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
-import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
+import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:flutter/services.dart';
 import 'package:web/web.dart' as web;
@@ -62,7 +62,7 @@ class WebLayerController {
     final featureLayer = JsFeatureLayer(jsProperties);
 
     // Add to map
-    map.add(featureLayer as JSObject);
+    map.add(featureLayer);
     _layers[layerId] = featureLayer as JSObject;
 
     return FeatureLayer(
@@ -86,7 +86,7 @@ class WebLayerController {
     final graphicsLayer = JsGraphicsLayer(layerProperties);
 
     // Add to map
-    map.add(graphicsLayer as JSObject);
+    map.add(graphicsLayer);
     _layers[layerId] = graphicsLayer as JSObject;
 
     return GraphicsLayer(
@@ -107,10 +107,10 @@ class WebLayerController {
       'url': url,
     }.jsify() as JSObject;
 
-    final sceneLayer = JsSceneLayerEnhanced(layerProperties);
+    final sceneLayer = JsSceneLayer(layerProperties);
 
     // Add to map
-    map.add(sceneLayer as JSObject);
+    map.add(sceneLayer);
     _layers[layerId] = sceneLayer as JSObject;
 
     return SceneLayer(
@@ -127,7 +127,7 @@ class WebLayerController {
   }) async {
     // Get the layer from the map
     final map = (view as JsView).map;
-    var layer = map.findLayerById(layerId.toJS);
+    JSObject? layer = map.findLayerById(layerId);
 
     // If not found in current map, check if it's a FeatureLayer that needs to be treated as GraphicsLayer
     if (layer == null) {
@@ -144,20 +144,21 @@ class WebLayerController {
     }
 
     // Check layer type and handle accordingly
-    final layerType = (layer as JsLayer).type;
+    final jsLayer = layer as JsLayer;
+    final layerType = jsLayer.type;
 
-    JsGraphicsLayerEnhanced? graphicsLayer;
+    JsGraphicsLayer? graphicsLayer;
     JsFeatureLayer? featureLayer;
 
     if (layerType == 'graphics') {
-      graphicsLayer = layer as JsGraphicsLayerEnhanced;
+      graphicsLayer = layer as JsGraphicsLayer;
     } else if (layerType == 'feature') {
       featureLayer = layer as JsFeatureLayer;
     }
 
     // Convert Dart graphic to JS graphic
     final graphicData = graphic.toJson().jsify() as JSObject;
-    final jsGraphic = JsGraphicEnhanced(graphicData);
+    final jsGraphic = JsGraphic(graphicData);
 
     if (graphicsLayer != null) {
       // Handle GraphicsLayer - add directly (cast enhanced graphic to expected type)
@@ -185,24 +186,25 @@ class WebLayerController {
   }) async {
     // Get the layer from the map instead of cached reference
     final map = (view as JsView).map;
-    final layer = map.findLayerById(layerId.toJS);
+    final layer = map.findLayerById(layerId);
 
     if (layer == null) {
       throw Exception('Layer with id $layerId not found');
     }
 
-    // Cast to graphics layer and check type
-    final layerType = (layer as JsLayer).type;
+    // Cast to layer and check type
+    final jsLayer = layer as JsLayer;
+    final layerType = jsLayer.type;
     if (layerType != 'graphics') {
       throw Exception(
           'Layer $layerId is not a graphics layer (type: $layerType)');
     }
-    final graphicsLayer = layer as JsGraphicsLayerEnhanced;
+    final graphicsLayer = layer as JsGraphicsLayer;
 
     // Find and remove the graphic with matching ID
     final graphics = graphicsLayer.graphics;
     graphics.forEach((JSAny? item) {
-      final g = item as JsGraphicEnhanced;
+      final g = item as JsGraphic;
       final attrs = g.attributes;
       final id = (attrs == null) ? null : (attrs['id'] as JSString?);
       if (id != null && id.toDart == objectId) {
@@ -225,12 +227,13 @@ class WebLayerController {
     if (layerId != null) {
       // Get the layer from the map instead of cached reference
       final map = (view as JsView).map;
-      final layer = map.findLayerById(layerId.toJS);
+      final layer = map.findLayerById(layerId);
 
       if (layer != null) {
-        // Cast to enhanced type for access to removeAll method
-        if ((layer as JsLayer).type == 'graphics') {
-          final graphicsLayer = layer as JsGraphicsLayerEnhanced;
+        // Cast to layer type for access to properties
+        final jsLayer = layer as JsLayer;
+        if (jsLayer.type == 'graphics') {
+          final graphicsLayer = layer as JsGraphicsLayer;
           // For simplicity, remove all graphics if no specific criteria
           if (removeByAttributeKey == null) {
             graphicsLayer.removeAll();
@@ -242,8 +245,9 @@ class WebLayerController {
     } else {
       // Remove from all graphics layers
       for (final layer in _layers.values) {
-        if ((layer as JsLayer).type == 'graphics') {
-          final graphicsLayer = layer as JsGraphicsLayerEnhanced;
+        final jsLayer = layer as JsLayer;
+        if (jsLayer.type == 'graphics') {
+          final graphicsLayer = layer as JsGraphicsLayer;
           graphicsLayer.removeAll();
         }
       }
@@ -343,7 +347,7 @@ class WebLayerController {
           ? animationOptions.toMap().jsify() as JSObject
           : null;
 
-      await (view as JsView).goTo(target, options).toDart;
+      await view.goTo(target, options).toDart;
       return true;
     } catch (e) {
       print('Error zooming in: $e');
@@ -367,7 +371,7 @@ class WebLayerController {
           ? animationOptions.toMap().jsify() as JSObject
           : null;
 
-      await (view as JsView).goTo(target, options).toDart;
+      await view.goTo(target, options).toDart;
       return true;
     } catch (e) {
       print('Error zooming out: $e');
@@ -383,9 +387,9 @@ class WebLayerController {
       JSPromise<JSObject> screenshotPromise;
 
       if (isSceneView) {
-        screenshotPromise = (view as JsSceneViewEnhanced).takeScreenshot();
+        screenshotPromise = (view as JsSceneView).takeScreenshot();
       } else {
-        screenshotPromise = (view as JsMapViewEnhanced).takeScreenshot();
+        screenshotPromise = (view as JsMapView).takeScreenshot();
       }
 
       final screenshotResult = await screenshotPromise.toDart;
@@ -425,17 +429,15 @@ class WebLayerController {
     required JSObject view,
     required bool isSceneView,
   }) {
-    final map = (view as JsView).map;
-
     for (final layer in _layers.values) {
-      final jsLayer = layer as JSObject;
-      if ((jsLayer as JsLayer).type == 'graphics' &&
-          (jsLayer as JsGraphicsLayerEnhanced).id == layerId) {
-        final graphicsLayer = jsLayer as JsGraphicsLayerEnhanced;
+      final jsLayer = layer as JsLayer;
+      if (jsLayer.type == 'graphics' &&
+          (jsLayer as JsGraphicsLayer).id == layerId) {
+        final graphicsLayer = jsLayer as JsGraphicsLayer;
         final graphics = graphicsLayer.graphics;
         bool updated = false;
         graphics.forEach((JSAny? item) {
-          final g = item as JsGraphicEnhanced;
+          final g = item as JsGraphic;
           final attrs = g.attributes;
           final id = (attrs == null) ? null : (attrs['id'] as JSString?);
           if (!updated && id != null && id.toDart == graphicId) {
@@ -466,14 +468,17 @@ class WebLayerController {
     try {
       // Get the layer from the map instead of cached reference
       final map = (view as JsView).map;
-      final layer = map.findLayerById(layerId.toJS);
+      final layer = map.findLayerById(layerId);
       if (layer == null) return false;
 
+      // Cast to layer type for method access
+      final jsLayer = layer as JsLayer;
+      
       // Remove from map
-      (map as JsMapEnhanced).remove(layer as JsLayer);
+      map.remove(jsLayer);
 
       // Destroy the layer
-      (layer as JsLayer).destroy();
+      jsLayer.destroy();
 
       // Remove from tracking
       _layers.remove(layerId);
@@ -491,17 +496,15 @@ class WebLayerController {
     required JSObject view,
     required bool isSceneView,
   }) {
-    final map = (view as JsView).map;
-
     for (final layer in _layers.values) {
-      final jsLayer = layer as JSObject;
-      if ((jsLayer as JsLayer).type == 'graphics') {
-        final graphicsLayer = jsLayer as JsGraphicsLayerEnhanced;
+      final jsLayer = layer as JsLayer;
+      if (jsLayer.type == 'graphics') {
+        final graphicsLayer = jsLayer as JsGraphicsLayer;
         final graphics = graphicsLayer.graphics;
         bool result = false;
         graphics.forEach((JSAny? item) {
           if (result) return;
-          final g = item as JsGraphicEnhanced;
+          final g = item as JsGraphic;
           final attrs = g.attributes;
           final id = (attrs == null) ? null : (attrs['id'] as JSString?);
           if (id != null && id.toDart == polygonId) {
@@ -528,13 +531,13 @@ class WebLayerController {
   }) async {
     if (isSceneView) {
       // For SceneView, set camera heading
-      final sceneView = view as JsSceneViewEnhanced;
+      final sceneView = view as JsSceneView;
       final camera = sceneView.camera;
       camera.heading = angleDegrees;
       sceneView.camera = camera;
     } else {
       // For MapView, set viewpoint rotation
-      final mapView = view as JsMapViewEnhanced;
+      final mapView = view as JsMapView;
       final viewpoint = mapView.viewpoint;
       viewpoint.rotation = angleDegrees;
       mapView.viewpoint = viewpoint;
@@ -559,9 +562,9 @@ class WebLayerController {
     }.jsify() as JSObject;
 
     if (isSceneView) {
-      (view as JsSceneViewEnhanced).padding = paddingObject;
+      (view as JsSceneView).padding = paddingObject;
     } else {
-      (view as JsMapViewEnhanced).padding = paddingObject;
+      (view as JsMapView).padding = paddingObject;
     }
   }
 
@@ -578,23 +581,23 @@ class WebLayerController {
     required bool isSceneView,
   }) async {
     if (isSceneView) {
-      final navigation = (view as JsSceneViewEnhanced).navigation;
+      final navigation = (view as JsSceneView).navigation;
       navigation['enabled'] = isEnabled.toJS;
     } else {
-      final navigation = (view as JsMapViewEnhanced).navigation;
+      final navigation = (view as JsMapView).navigation;
       navigation['enabled'] = isEnabled.toJS;
     }
   }
 
   Future<void> retryLoad(JSObject view) async {
     // Refresh/reload the map and its layers
-    final map = (view as JsView).map;
 
     // Reload all layers
     for (final layer in _layers.values) {
-      final layerType = (layer as JsLayer).type;
+      final jsLayer = layer as JsLayer;
+      final layerType = jsLayer.type;
       if (layerType == 'scene') {
-        await (layer as JsSceneLayerEnhanced).load().toDart;
+        await (layer as JsSceneLayer).load().toDart;
       }
     }
 

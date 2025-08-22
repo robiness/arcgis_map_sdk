@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
-import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
+import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:async/async.dart';
 
 class WebStreamManager {
@@ -81,12 +81,12 @@ class WebStreamManager {
     final controller = StreamController<LatLng>.broadcast();
 
     // Initial value
-    final center = view.center as JsPoint;
+    final center = view.center;
     controller.add(LatLng(center.latitude, center.longitude));
 
     // Watch for center changes
     final handler = (JSObject event) {
-      final newCenter = view.center as JsPoint;
+      final newCenter = view.center;
       controller.add(LatLng(newCenter.latitude, newCenter.longitude));
     }.toJS as JSFunction;
 
@@ -200,16 +200,8 @@ class WebStreamManager {
   Future<void> _handleClickEvent(JSObject event,
       StreamController<Attributes?> controller, JsView view) async {
     try {
-      JSPromise<JsHitTestResult> hitTestPromise;
-
-      if (view is JsMapViewEnhanced) {
-        hitTestPromise = view.hitTest(event);
-      } else if (view is JsSceneViewEnhanced) {
-        hitTestPromise = view.hitTest(event);
-      } else {
-        // Fallback for older types
-        hitTestPromise = view.hitTest(event);
-      }
+      // All view types have the same hitTest method
+      final hitTestPromise = view.hitTest(event);
 
       final hitTestResult = await hitTestPromise.toDart;
       final results = hitTestResult.results;
@@ -219,7 +211,7 @@ class WebStreamManager {
         final graphic = firstResult.graphic;
 
         if (graphic != null) {
-          final attributes = graphic.attributes;
+          final attributes = graphic.attributes as JsAttributes?;
           if (attributes != null) {
             // Convert JSObject attributes to Dart Attributes
             // This is a simplified conversion
@@ -295,15 +287,8 @@ class WebStreamManager {
   Future<void> _handleHoverEvent(
       JSObject event, StreamController<bool> controller, JsView view) async {
     try {
-      JSPromise<JsHitTestResult> hitTestPromise;
-
-      if (view is JsMapViewEnhanced) {
-        hitTestPromise = view.hitTest(event);
-      } else if (view is JsSceneViewEnhanced) {
-        hitTestPromise = view.hitTest(event);
-      } else {
-        hitTestPromise = view.hitTest(event);
-      }
+      // All view types have the same hitTest method
+      final hitTestPromise = view.hitTest(event);
 
       final hitTestResult = await hitTestPromise.toDart;
       final results = hitTestResult.results;

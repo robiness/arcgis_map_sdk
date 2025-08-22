@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
-import 'package:arcgis_map_sdk_web/arcgis_map_web_js.dart';
+import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/web_layer_controller.dart';
 import 'package:arcgis_map_sdk_web/src/web_stream_manager.dart';
 import 'package:flutter/services.dart';
@@ -18,8 +18,8 @@ class ArcgisMapWebController {
   late final WebStreamManager _streamManager;
 
   // View management
-  JsMapViewEnhanced? _mapView;
-  JsSceneViewEnhanced? _sceneView;
+  JsMapView? _mapView;
+  JsSceneView? _sceneView;
   bool _isSceneViewActive = false;
   JsView? get _activeView => _isSceneViewActive ? _sceneView : _mapView;
 
@@ -29,7 +29,7 @@ class ArcgisMapWebController {
     return controller;
   }
 
-  void setViews(JsMapViewEnhanced mapView, JsSceneViewEnhanced sceneView) {
+  void setViews(JsMapView mapView, JsSceneView sceneView) {
     _mapView = mapView;
     _sceneView = sceneView;
   }
