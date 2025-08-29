@@ -30,7 +30,7 @@ flutter:
     platforms:
       web:
         pluginClass: ArcgisMapWeb
-        fileName: arcgis_map_web_js.dart
+        fileName: src/arcgis_map_sdk_web.dart
 
   assets:
 
