@@ -26,7 +26,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   
   // Store mapOptions for each map instance
   static final Map<int, ArcgisMapOptions> _mapOptions = {};
-  
+
+  // Store the shared map so we can create the lazy view later
+  static final Map<int, JsEsriMap> _sharedMaps = {};
+
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
   static final Set<String> _registeredViewTypes = {};
@@ -190,6 +193,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       viewType: viewType,
       onPlatformViewCreated: (int id) {
         print('onPlatformViewCreated called with id: $id');
+        // The platform view id can differ from creationId.
+        // Remap mapOptions so init(id) finds them under the correct key.
+        if (id != creationId && _mapOptions.containsKey(creationId)) {
+          _mapOptions[id] = _mapOptions[creationId]!;
+          _mapOptions.remove(creationId);
+          print('Remapped mapOptions from creationId: $creationId to platformViewId: $id');
+        }
         onPlatformViewCreated(id);
       },
     );
@@ -205,14 +215,14 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     final center = view.center as JsPoint;
     controller.add(LatLng(center.latitude, center.longitude));
 
-    // Watch for center changes
-    final centerHandler = (JSObject event) {
+    // watch() is for property changes; on() is only for events like 'click'
+    final centerHandler = (JSAny? newValue, JSAny? oldValue,
+            JSAny? propertyName, JSAny? target) {
       final newCenter = view.center as JsPoint;
       controller.add(LatLng(newCenter.latitude, newCenter.longitude));
     }.toJS as JSFunction;
 
-    final eventArray = ['center'.toJS].toJS;
-    view.on(eventArray, centerHandler);
+    view.watch('center', centerHandler);
 
     return controller.stream;
   }
@@ -270,6 +280,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       // Remove from maps
       _mapViews.remove(mapId);
       _sceneViews.remove(mapId);
+      _sharedMaps.remove(mapId);
       _isSceneViewActive.remove(mapId);
       _methodCallHandlers.remove(mapId);
       _clickControllers.remove(mapId);
@@ -327,37 +338,54 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     // Get initial bounds
     final extent = view.extent;
     if (extent != null) {
-      final initialBounds = BoundingBox(
-        height: extent.height,
-        width: extent.width,
-        topRight: LatLng(extent.center.latitude + (extent.height / 2),
-            extent.center.longitude + (extent.width / 2)),
-        lowerLeft: LatLng(extent.center.latitude - (extent.height / 2),
-            extent.center.longitude - (extent.width / 2)),
-      );
-      controller.add(initialBounds);
+      controller.add(_extentToBoundingBox(extent));
     }
 
-    // Watch for extent changes
-    final extentHandler = (JSObject event) {
+    // watch() is for property changes; on() is only for events like 'click'
+    final extentHandler = (JSAny? newValue, JSAny? oldValue,
+            JSAny? propertyName, JSAny? target) {
       final newExtent = view.extent;
       if (newExtent != null) {
-        final newBounds = BoundingBox(
-          height: newExtent.height,
-          width: newExtent.width,
-          topRight: LatLng(newExtent.center.latitude + (newExtent.height / 2),
-              newExtent.center.longitude + (newExtent.width / 2)),
-          lowerLeft: LatLng(newExtent.center.latitude - (newExtent.height / 2),
-              newExtent.center.longitude - (newExtent.width / 2)),
-        );
-        controller.add(newBounds);
+        controller.add(_extentToBoundingBox(newExtent));
       }
     }.toJS as JSFunction;
 
-    final eventArray = ['extent'.toJS].toJS;
-    view.on(eventArray, extentHandler);
+    view.watch('extent', extentHandler);
 
     return controller.stream;
+  }
+
+  BoundingBox _extentToBoundingBox(JsExtent extent) {
+    final topRightProps = <String, dynamic>{
+      'x': extent.xmax,
+      'y': extent.ymax,
+    }.jsify() as JSObject;
+    topRightProps['spatialReference'] = extent.spatialReference;
+    final topRight = JsPoint(topRightProps);
+
+    final lowerLeftProps = <String, dynamic>{
+      'x': extent.xmin,
+      'y': extent.ymin,
+    }.jsify() as JSObject;
+    lowerLeftProps['spatialReference'] = extent.spatialReference;
+    final lowerLeft = JsPoint(lowerLeftProps);
+
+    print('[BOUNDS DEBUG] xmin=${extent.xmin}, ymin=${extent.ymin}, '
+        'xmax=${extent.xmax}, ymax=${extent.ymax}');
+    print('[BOUNDS DEBUG] center lat=${extent.center.latitude}, '
+        'lng=${extent.center.longitude}');
+    print('[BOUNDS DEBUG] spatialReference=${jsonStringify(extent.spatialReference)}');
+    print('[BOUNDS DEBUG] topRight lat=${topRight.latitude}, '
+        'lng=${topRight.longitude}');
+    print('[BOUNDS DEBUG] lowerLeft lat=${lowerLeft.latitude}, '
+        'lng=${lowerLeft.longitude}');
+
+    return BoundingBox(
+      height: extent.height,
+      width: extent.width,
+      topRight: LatLng(topRight.latitude, topRight.longitude),
+      lowerLeft: LatLng(lowerLeft.latitude, lowerLeft.longitude),
+    );
   }
 
   @override
@@ -425,12 +453,16 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final controller = await ArcgisMapWebController.init(mapId);
       _controllers[mapId] = controller;
 
-      // Create views using enhanced types for better functionality
-      print('Creating enhanced 2D map view...');
-      final mapProperties2D = {
-        'basemap': 'streets-navigation-vector'.toJS,
-      }.jsify()! as JSObject;
-      final map2D = JsEsriMap(mapProperties2D);
+      // Create a single shared map using mapOptions
+      final basemapValue = mapOptions.basemap?.value ?? 'osm/light-gray';
+      final groundValue = mapOptions.ground?.value;
+
+      final mapProperties = <String, dynamic>{
+        'basemap': basemapValue,
+        if (groundValue != null) 'ground': groundValue,
+      };
+      final sharedMap = JsEsriMap(mapProperties.jsify()! as JSObject);
+      print('Shared map created with basemap: $basemapValue, ground: $groundValue');
 
       // Wait for the container div to be created by Flutter
       print('Looking for container: map-$mapId');
@@ -440,7 +472,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       for (int i = 0; i < 50; i++) {
         container = web.document.getElementById('map-$mapId');
         if (container != null) break;
-        await Future.delayed(Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       if (container == null) {
@@ -449,50 +481,60 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
       print('Container found: ${container.id}');
 
-      final mapViewProperties = {
-        'container': container,
-        'map': map2D,
-        'zoom': 2.toJS,
-        'center': [-118.805, 34.027].map((n) => n.toJS).toList().toJS,
-      }.jsify()! as JSObject;
-      final mapView = JsMapView(mapViewProperties);
-      print('2D Map view created successfully');
+      final startIn3D = mapOptions.mapStyle == MapStyle.threeD;
 
-      print('Creating enhanced 3D scene view...');
-      final mapProperties3D = {
-        'basemap': 'topo-3d'.toJS,
-        'ground': 'world-elevation'.toJS,
-      }.jsify()! as JSObject;
-      final map3D = JsEsriMap(mapProperties3D);
+      // Store the shared map for lazy view creation during switchMapStyle
+      _sharedMaps[mapId] = sharedMap;
 
-      final sceneViewProperties = {
-        'container': null, // Will be set when switching to 3D
-        'map': map3D,
-        'camera': {
-          'position': {
-            'spatialReference': {'latestWkid': 3857, 'wkid': 102100}.jsify(),
-            'x': (-118.805 * 111320).toJS,
-            'y': (34.027 * 111320).toJS,
-            'z': 18161244.toJS,
-          }.jsify(),
-          'heading': 0.toJS,
-          'tilt': 0.49.toJS,
-        }.jsify(),
-      }.jsify()! as JSObject;
-      final sceneView = JsSceneView(sceneViewProperties);
-      print('3D Scene view created successfully');
+      // Only create the view we actually need. The other view is created
+      // lazily in switchMapStyle(). Creating both upfront causes the
+      // inactive view to fail on 3D-only basemap sublayers.
+      if (startIn3D) {
+        print('Creating 3D scene view...');
+        final sceneViewProperties = <String, dynamic>{
+          'container': container,
+          'map': sharedMap,
+          'zoom': mapOptions.zoom,
+          'center': [mapOptions.initialCenter.longitude, mapOptions.initialCenter.latitude],
+        };
+        final sceneView = JsSceneView(sceneViewProperties.jsify()! as JSObject);
+        print('3D Scene view created successfully');
 
-      // Store views for backwards compatibility
-      _mapViews[mapId] = mapView;
-      _sceneViews[mapId] = sceneView;
-      _isSceneViewActive[mapId] = false;
+        _applyPadding(mapOptions, sceneView);
+        _sceneViews[mapId] = sceneView;
+        _isSceneViewActive[mapId] = true;
 
-      // Set views on the controller so it can access them
-      controller.setViews(mapView, sceneView);
+        controller.setSceneView(sceneView);
+        controller.switchMapStyle(MapStyle.threeD);
+        _setupClickListener(mapId, sceneView);
+      } else {
+        print('Creating 2D map view...');
+        final mapViewProperties = <String, dynamic>{
+          'container': container,
+          'map': sharedMap,
+          'zoom': mapOptions.zoom,
+          'center': [mapOptions.initialCenter.longitude, mapOptions.initialCenter.latitude],
+          if (mapOptions.minZoom > 0 || mapOptions.maxZoom > 0)
+            'constraints': <String, dynamic>{
+              if (mapOptions.minZoom > 0) 'minZoom': mapOptions.minZoom,
+              if (mapOptions.maxZoom > 0) 'maxZoom': mapOptions.maxZoom,
+            },
+          if (mapOptions.heading != 0) 'rotation': -mapOptions.heading,
+        };
+        final mapView = JsMapView(mapViewProperties.jsify()! as JSObject);
+        print('2D Map view created successfully');
 
-      // Set up click listeners for backwards compatibility
-      _setupClickListener(mapId, mapView);
-      _setupClickListener(mapId, sceneView);
+        _applyPadding(mapOptions, mapView);
+        _mapViews[mapId] = mapView;
+        _isSceneViewActive[mapId] = false;
+
+        controller.setMapView(mapView);
+        _setupClickListener(mapId, mapView);
+      }
+
+      if (mapOptions.showLabelsBeneathGraphics) {
+        await _moveReferenceLayersBeneathGraphics(sharedMap);
+      }
 
       print('Map initialization completed for mapId: $mapId');
     } catch (e) {
@@ -514,7 +556,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   static Future<void> _injectArcGISScripts() async {
-    print('Starting ArcGIS script injection...');
+    print('Starting ArcGIS script injection (ESM)...');
 
     // Inject CSS
     final cssLink = web.document.createElement('link') as web.HTMLLinkElement;
@@ -524,113 +566,54 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     web.document.head?.appendChild(cssLink);
     print('CSS injected: ${cssLink.href}');
 
-    // Inject JavaScript
+    // Use ES Modules instead of AMD to avoid RequireJS conflicts with
+    // Flutter's DDC debug mode. The ArcGIS CDN serves ESM at @arcgis/core/.
+    final cdnBase = 'https://js.arcgis.com/$_arcgisVersion/@arcgis/core';
+
     final script =
         web.document.createElement('script') as web.HTMLScriptElement;
-    script.src = 'https://js.arcgis.com/$_arcgisVersion/';
-    script.async = true;
+    script.type = 'module';
+    script.textContent = '''
+import Map from "$cdnBase/Map.js";
+import MapView from "$cdnBase/views/MapView.js";
+import SceneView from "$cdnBase/views/SceneView.js";
+import Attribution from "$cdnBase/widgets/Attribution.js";
+import SceneLayer from "$cdnBase/layers/SceneLayer.js";
+import GraphicsLayer from "$cdnBase/layers/GraphicsLayer.js";
+import FeatureLayer from "$cdnBase/layers/FeatureLayer.js";
+import Graphic from "$cdnBase/Graphic.js";
+import Point from "$cdnBase/geometry/Point.js";
+import esriConfig from "$cdnBase/config.js";
 
-    print('Script element created: ${script.src}');
-
-    // Wait for script to load
-    final scriptCompleter = Completer<void>();
-    script.onLoad.listen((_) {
-      print('ArcGIS script loaded successfully');
-      scriptCompleter.complete();
-    });
-    script.onError.listen((error) {
-      print('Failed to load ArcGIS script: $error');
-      scriptCompleter.completeError('Failed to load ArcGIS API: $error');
-    });
+window.esri = {
+  Map: Map,
+  views: { MapView: MapView, SceneView: SceneView },
+  widgets: { Attribution: Attribution },
+  layers: { SceneLayer: SceneLayer, GraphicsLayer: GraphicsLayer, FeatureLayer: FeatureLayer },
+  geometry: { Point: Point },
+  Graphic: Graphic,
+  config: esriConfig
+};
+window.SceneLayer = SceneLayer;
+window.GraphicsLayer = GraphicsLayer;
+window.FeatureLayer = FeatureLayer;
+window.Graphic = Graphic;
+window.esriConfig = esriConfig;
+window._arcgisModulesReady = true;
+console.log("ArcGIS modules loaded via ESM");
+''';
 
     web.document.head?.appendChild(script);
-    print('Script added to document head');
+    print('ESM module script injected');
 
-    try {
-      await scriptCompleter.future;
-      print('Script loaded, now requiring AMD modules...');
-
-      // Now use AMD require to load the modules and expose them globally
-      _arcgisModulesCompleter = Completer<void>();
-
-      // Configure AMD loader using safe external function
-      final config = {
-        'baseUrl': 'https://js.arcgis.com/$_arcgisVersion/',
-        'paths': {
-          'esri': 'esri'
-        }
-      }.jsify() as JSObject;
-      
-      requireConfig(config);
-      
-      // Load required ArcGIS modules
-      final modules = [
-        'esri/Map',
-        'esri/views/MapView', 
-        'esri/views/SceneView',
-        'esri/widgets/Attribution',
-        'esri/layers/SceneLayer',
-        'esri/layers/GraphicsLayer',
-        'esri/layers/FeatureLayer',
-        'esri/Graphic',
-        'esri/config'
-      ];
-      
-      // Create callback function using Function constructor (safer than eval)
-      final callback = createFunction('''
-        return function(Map, MapView, SceneView, Attribution, SceneLayer, GraphicsLayer, FeatureLayer, Graphic, esriConfig) {
-          console.log("ArcGIS modules loaded via AMD");
-          
-          // Expose modules globally with proper nested structure for Dart interop
-          window.esri = {
-            Map: Map,
-            views: {
-              MapView: MapView,
-              SceneView: SceneView
-            },
-            widgets: {
-              Attribution: Attribution
-            },
-            layers: {
-              SceneLayer: SceneLayer,
-              GraphicsLayer: GraphicsLayer,
-              FeatureLayer: FeatureLayer
-            },
-            Graphic: Graphic,
-            config: esriConfig
-          };
-          
-          // Expose constructors directly for easier Dart interop access
-          window.SceneLayer = SceneLayer;
-          window.GraphicsLayer = GraphicsLayer;
-          window.FeatureLayer = FeatureLayer;
-          window.Graphic = Graphic;
-          window.esriConfig = esriConfig;
-          
-          // Signal that modules are ready
-          window._arcgisModulesReady = true;
-          console.log("ArcGIS modules exposed globally, including Graphic, SceneLayer, GraphicsLayer, FeatureLayer, and esriConfig");
-        };
-      '''.toJS).callAsFunction() as JSFunction;
-      
-      // Call require with modules and callback
-      require.callAsFunction(
-        null,
-        modules.map((m) => m.toJS).toList().toJS,
-        callback
-      );
-
-      // Wait for the modules to be loaded using direct property access
-      while (arcgisModulesReady?.dartify() != true) {
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      _arcgisModulesCompleter!.complete();
-      print('ArcGIS AMD modules loaded and exposed globally');
-    } catch (e) {
-      print('Script injection failed: $e');
-      rethrow;
+    // Wait for the ESM modules to load and execute
+    _arcgisModulesCompleter = Completer<void>();
+    while (arcgisModulesReady?.dartify() != true) {
+      await Future.delayed(const Duration(milliseconds: 100));
     }
+
+    _arcgisModulesCompleter!.complete();
+    print('ArcGIS ESM modules loaded and exposed globally');
   }
 
   bool _isArcGISAPILoaded() {
@@ -1104,52 +1087,97 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     try {
       print('Switching map style for mapId: $mapId to: $mapStyle');
 
-      final mapView = _mapViews[mapId];
-      final sceneView = _sceneViews[mapId];
       final isCurrentlySceneView = _isSceneViewActive[mapId] ?? false;
+      final shouldUse3D = mapStyle == MapStyle.threeD;
 
-      if (mapView == null || sceneView == null) {
-        print('Views not found for mapId: $mapId');
+      if (shouldUse3D == isCurrentlySceneView) {
+        print('No view change needed - already in ${shouldUse3D ? '3D' : '2D'} mode');
         return;
       }
 
       final container = web.document.getElementById('map-$mapId');
-      if (container == null) {
-        print('Container not found for mapId: $mapId');
+      final sharedMap = _sharedMaps[mapId];
+      final mapOptions = _mapOptions[mapId];
+      if (container == null || sharedMap == null) {
+        print('Container or shared map not found for mapId: $mapId');
         return;
       }
 
-      final shouldUse3D = mapStyle == MapStyle.threeD;
+      if (shouldUse3D) {
+        // 2D → 3D
+        final mapView = _mapViews[mapId]!;
+        final center = mapView.center;
+        final zoom = mapView.zoom;
 
-      if (shouldUse3D && !isCurrentlySceneView) {
-        // Switch from 2D to 3D
-        print('Switching from 2D to 3D');
-
-        // Remove container from 2D view
         mapView.container = null;
 
-        // Set container to 3D view
-        sceneView.container = container;
+        // Create SceneView lazily on first switch to 3D
+        var sceneView = _sceneViews[mapId];
+        if (sceneView == null) {
+          sceneView = JsSceneView(<String, dynamic>{
+            'container': container,
+            'map': sharedMap,
+            'zoom': zoom,
+            'center': [center.longitude, center.latitude],
+          }.jsify()! as JSObject);
+
+          _applyPadding(mapOptions, sceneView);
+          _sceneViews[mapId] = sceneView;
+          _controllers[mapId]?.setSceneView(sceneView);
+          _setupClickListener(mapId, sceneView);
+          print('SceneView created lazily');
+        } else {
+          sceneView.container = container;
+          sceneView.goTo(<String, dynamic>{
+            'center': [center.longitude, center.latitude],
+            'zoom': zoom,
+          }.jsify()! as JSObject);
+        }
 
         _isSceneViewActive[mapId] = true;
-        print('Successfully switched to 3D view');
-      } else if (!shouldUse3D && isCurrentlySceneView) {
-        // Switch from 3D to 2D
-        print('Switching from 3D to 2D');
+        _setSceneLayersVisible(sharedMap, visible: true);
+        print('Switched to 3D view');
+      } else {
+        // 3D → 2D
+        final sceneView = _sceneViews[mapId]!;
+        final center = sceneView.center;
+        final zoom = sceneView.zoom;
 
-        // Remove container from 3D view
+        _setSceneLayersVisible(sharedMap, visible: false);
         sceneView.container = null;
 
-        // Set container to 2D view
-        mapView.container = container;
+        // Create MapView lazily on first switch to 2D
+        var mapView = _mapViews[mapId];
+        if (mapView == null) {
+          mapView = JsMapView(<String, dynamic>{
+            'container': container,
+            'map': sharedMap,
+            'zoom': zoom,
+            'center': [center.longitude, center.latitude],
+            if (mapOptions != null && (mapOptions.minZoom > 0 || mapOptions.maxZoom > 0))
+              'constraints': <String, dynamic>{
+                if (mapOptions.minZoom > 0) 'minZoom': mapOptions.minZoom,
+                if (mapOptions.maxZoom > 0) 'maxZoom': mapOptions.maxZoom,
+              },
+          }.jsify()! as JSObject);
+
+          _applyPadding(mapOptions, mapView);
+          _mapViews[mapId] = mapView;
+          _controllers[mapId]?.setMapView(mapView);
+          _setupClickListener(mapId, mapView);
+          print('MapView created lazily');
+        } else {
+          mapView.container = container;
+          mapView.goTo(<String, dynamic>{
+            'center': [center.longitude, center.latitude],
+            'zoom': zoom,
+          }.jsify()! as JSObject);
+        }
 
         _isSceneViewActive[mapId] = false;
-        print('Successfully switched to 2D view');
-      } else {
-        print(
-            'No view change needed - already in ${shouldUse3D ? '3D' : '2D'} mode');
+        print('Switched to 2D view');
       }
-      
+
       // Notify the controller about the view change
       final controller = _controllers[mapId];
       if (controller != null) {
@@ -1169,7 +1197,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       // Change basemap using direct property assignment
       final enhancedMap = view.map as JsEsriMap;
-      enhancedMap.basemap = basemapId;
+      enhancedMap.basemap = basemapId.toJS;
 
       print('Basemap changed to: $basemapId');
     } catch (e) {
@@ -1302,18 +1330,97 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   static void _setupClickListener(int mapId, JsView view) {
-    // Create the click event handler
     final clickHandler = (JSObject event) {
-      final controller = _clickControllers[mapId];
-      if (controller != null) {
-        // For now, emit null attributes as a basic implementation
-        // TODO: Implement proper hit testing to get feature attributes
-        controller.add(null);
-      }
+      _handleClick(mapId, view, event);
     }.toJS as JSFunction;
 
-    // Add click event listener to the view
     final eventArray = ['click'.toJS].toJS;
     view.on(eventArray, clickHandler);
   }
+
+  static Future<void> _handleClick(
+      int mapId, JsView view, JSObject event) async {
+    final controller = _clickControllers[mapId];
+    if (controller == null) return;
+
+    try {
+      final hitTestResult = await view.hitTest(event).toDart;
+      final results = hitTestResult.results;
+
+      if (results != null && results.toDart.isNotEmpty) {
+        final graphic = results.toDart.first.graphic;
+        if (graphic != null) {
+          final jsAttributes = graphic['attributes'] as JSObject?;
+          if (jsAttributes != null) {
+            final dartMap = jsAttributes.dartify();
+            if (dartMap is Map) {
+              controller.add(Attributes(Map<String, dynamic>.from(dartMap)));
+              return;
+            }
+          }
+        }
+      }
+
+      controller.add(null);
+    } catch (e) {
+      print('Error in click handler: $e');
+      controller.add(null);
+    }
+  }
+
+  /// Toggles visibility of 3D-only layers (type 'scene') on the shared map.
+  /// Prevents the 2D MapView from failing to create LayerViews for
+  /// unsupported layer types.
+  static void _setSceneLayersVisible(JsEsriMap map, {required bool visible}) {
+    final layers = map.layers;
+    final layerItems = layers['items'] as JSArray?;
+    if (layerItems == null) return;
+
+    for (int i = 0; i < layerItems.toDart.length; i++) {
+      final layer = layerItems.toDart[i] as JSObject;
+      final layerType = (layer['type'] as JSString?)?.toDart;
+      if (layerType == 'scene') {
+        layer['visible'] = visible.toJS;
+      }
+    }
+  }
+
+  /// Applies padding from mapOptions to a view.
+  static void _applyPadding(ArcgisMapOptions? mapOptions, JsView view) {
+    if (mapOptions == null) return;
+    final padding = mapOptions.padding;
+    if (padding.left > 0 || padding.top > 0 || padding.right > 0 || padding.bottom > 0) {
+      final jsPadding = <String, dynamic>{
+        'left': padding.left,
+        'top': padding.top,
+        'right': padding.right,
+        'bottom': padding.bottom,
+      }.jsify()! as JSObject;
+      view.padding = jsPadding;
+    }
+  }
+
+  /// Moves basemap reference layers (labels) into the map's operational
+  /// layers at index 0 so that graphics layers render on top of them.
+  static Future<void> _moveReferenceLayersBeneathGraphics(
+      JsEsriMap map) async {
+    final basemap = map.basemap as JsBasemap;
+
+    if (!basemap.loaded) {
+      await basemap.load().toDart;
+    }
+
+    final refLayers = basemap.referenceLayers;
+    final items = refLayers.toArray();
+    if (items.toDart.isEmpty) {
+      print('No basemap reference layers found to move');
+      return;
+    }
+
+    map.addMany(items, 0);
+    refLayers.removeAll();
+    print('Moved ${items.toDart.length} basemap reference layers '
+        'beneath graphics');
+  }
 }
+

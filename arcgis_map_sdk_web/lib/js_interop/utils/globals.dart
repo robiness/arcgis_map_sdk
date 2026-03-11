@@ -9,12 +9,6 @@ import 'dart:js_interop';
 @JS("JSON.stringify")
 external String jsonStringify(JSAny value);
 
-@JS('require')
-external JSFunction get require;
-
-@JS('require.config')
-external void requireConfig(JSObject config);
-
 @JS('window._arcgisModulesReady')
 external JSAny? get arcgisModulesReady;
 
@@ -26,9 +20,6 @@ external JSObject get esriConfig;
 
 @JS('Object.defineProperty')
 external void defineProperty(JSObject obj, String name, JSObject descriptor);
-
-@JS('Function')
-external JSFunction createFunction(JSString code);
 
 @JS('window')
 external JSObject get window;

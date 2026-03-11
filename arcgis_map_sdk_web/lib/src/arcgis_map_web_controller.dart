@@ -29,8 +29,11 @@ class ArcgisMapWebController {
     return controller;
   }
 
-  void setViews(JsMapView mapView, JsSceneView sceneView) {
+  void setMapView(JsMapView mapView) {
     _mapView = mapView;
+  }
+
+  void setSceneView(JsSceneView sceneView) {
     _sceneView = sceneView;
   }
 
@@ -91,6 +94,7 @@ class ArcgisMapWebController {
       url: url,
       options: options,
       view: view,
+      isSceneViewActive: _isSceneViewActive,
     );
   }
 

@@ -17,5 +17,6 @@ extension type JsExtent._(JSObject _) implements JSObject {
   external double get ymin;
   external double get xmax;
   external double get ymax;
+  external JSObject get spatialReference;
   external factory JsExtent(JSObject properties);
 }

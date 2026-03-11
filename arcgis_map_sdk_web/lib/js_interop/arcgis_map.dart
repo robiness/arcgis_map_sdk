@@ -21,6 +21,7 @@ extension type JsView._(JSObject _) implements JSObject {
   external set padding(JSObject padding);
   external JSObject get padding;
   external JsHandle on(JSAny event, JSFunction callback);
+  external JsHandle watch(String property, JSFunction callback);
   external JSPromise<JsHitTestResult> hitTest(JSObject event,
       [JSObject? options]);
   external JSPromise<JSObject?> goTo(JSObject target,
@@ -40,8 +41,8 @@ extension type JsView._(JSObject _) implements JSObject {
 @JS("esri.Map")
 extension type JsEsriMap._(JSObject _) implements JSObject {
   external factory JsEsriMap(JSObject properties);
-  external String get basemap;
-  external set basemap(String value);
+  external JSObject get basemap;
+  external set basemap(JSAny value);
   external JsCollection<JsLayer> get layers;
   external JsCollection<JsLayer> get allLayers;
   external String? get ground;

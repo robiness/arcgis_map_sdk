@@ -54,12 +54,13 @@ class WebStreamManager {
     // Initial value
     controller.add(view.zoom);
 
-    // Watch for zoom changes
-    final handler = (JSObject event) {
+    // watch() is for property changes; on() is only for events like 'click'
+    final handler = (JSAny? newValue, JSAny? oldValue, JSAny? propertyName,
+            JSAny? target) {
       controller.add(view.zoom);
     }.toJS as JSFunction;
 
-    final handle = view.on(['zoom'.toJS].toJS, handler);
+    final handle = view.watch('zoom', handler);
     _eventHandles.add(handle);
 
     _zoomStreamGroup.add(controller.stream);
@@ -84,13 +85,14 @@ class WebStreamManager {
     final center = view.center;
     controller.add(LatLng(center.latitude, center.longitude));
 
-    // Watch for center changes
-    final handler = (JSObject event) {
+    // watch() is for property changes; on() is only for events like 'click'
+    final handler = (JSAny? newValue, JSAny? oldValue, JSAny? propertyName,
+            JSAny? target) {
       final newCenter = view.center;
       controller.add(LatLng(newCenter.latitude, newCenter.longitude));
     }.toJS as JSFunction;
 
-    final handle = view.on(['center'.toJS].toJS, handler);
+    final handle = view.watch('center', handler);
     _eventHandles.add(handle);
 
     _centerPositionStreamGroup.add(controller.stream);
@@ -118,8 +120,9 @@ class WebStreamManager {
       controller.add(initialBounds);
     }
 
-    // Watch for extent changes
-    final handler = (JSObject event) {
+    // watch() is for property changes; on() is only for events like 'click'
+    final handler = (JSAny? newValue, JSAny? oldValue, JSAny? propertyName,
+            JSAny? target) {
       final newExtent = view.extent;
       if (newExtent != null) {
         final newBounds = _extentToBoundingBox(newExtent);
@@ -127,20 +130,45 @@ class WebStreamManager {
       }
     }.toJS as JSFunction;
 
-    final handle = view.on(['extent'.toJS].toJS, handler);
+    final handle = view.watch('extent', handler);
     _eventHandles.add(handle);
 
     _boundsStreamGroup.add(controller.stream);
   }
 
   BoundingBox _extentToBoundingBox(JsExtent extent) {
+    final sr = extent.spatialReference;
+    print('[BOUNDS DEBUG] xmin=${extent.xmin}, ymin=${extent.ymin}, '
+        'xmax=${extent.xmax}, ymax=${extent.ymax}');
+    print('[BOUNDS DEBUG] center lat=${extent.center.latitude}, '
+        'lng=${extent.center.longitude}');
+    print('[BOUNDS DEBUG] height=${extent.height}, width=${extent.width}');
+    print('[BOUNDS DEBUG] spatialReference=${jsonStringify(sr)}');
+
+    final topRightProps = <String, dynamic>{
+      'x': extent.xmax,
+      'y': extent.ymax,
+    }.jsify() as JSObject;
+    topRightProps['spatialReference'] = sr;
+    final topRight = JsPoint(topRightProps);
+
+    final lowerLeftProps = <String, dynamic>{
+      'x': extent.xmin,
+      'y': extent.ymin,
+    }.jsify() as JSObject;
+    lowerLeftProps['spatialReference'] = sr;
+    final lowerLeft = JsPoint(lowerLeftProps);
+
+    print('[BOUNDS DEBUG] topRight lat=${topRight.latitude}, '
+        'lng=${topRight.longitude}');
+    print('[BOUNDS DEBUG] lowerLeft lat=${lowerLeft.latitude}, '
+        'lng=${lowerLeft.longitude}');
+
     return BoundingBox(
       height: extent.height,
       width: extent.width,
-      topRight: LatLng(extent.center.latitude + (extent.height / 2),
-          extent.center.longitude + (extent.width / 2)),
-      lowerLeft: LatLng(extent.center.latitude - (extent.height / 2),
-          extent.center.longitude - (extent.width / 2)),
+      topRight: LatLng(topRight.latitude, topRight.longitude),
+      lowerLeft: LatLng(lowerLeft.latitude, lowerLeft.longitude),
     );
   }
 

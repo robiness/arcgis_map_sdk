@@ -74,7 +74,7 @@ class _ExampleMapState extends State<ExampleMap> {
   bool _subscribedToZoom = false;
   final Map<String, bool> _hoveredPolygons = {};
 
-  bool show3dMap = false;
+  bool show3dMap = true;
   final initialCenter = const LatLng(51.16, 10.45);
   final tappedHQ = const LatLng(48.1234963, 11.5910182);
   var _isInteractionEnabled = true;
@@ -123,7 +123,12 @@ class _ExampleMapState extends State<ExampleMap> {
       });
 
       // Create basic 3D Layer with elevation and 3D buildings
-      await _createSceneLayer();
+      // Fire and forget to prevent UI blocking
+      _createSceneLayer().then((_) {
+        print('SceneLayer created successfully');
+      }).catchError((e) {
+        print('Error creating SceneLayer: $e');
+      });
 
       // Create GraphicsLayer with Polygons
       await _createGraphicLayer(
@@ -303,10 +308,10 @@ class _ExampleMapState extends State<ExampleMap> {
     final layer = await _controller?.addSceneLayer(
       layerId: '3D Buildings',
       options: SceneLayerOptions(
-        symbol: mesh3d,
+        symbol: mesh3d, // Ignored by web implementation currently
       ),
       url:
-          'https://basemaps3d.arcgis.com/arcgis/rest/services/OpenStreetMap3D_Buildings_v1/SceneServer',
+          'https://tiles.arcgis.com/tiles/z2tnIkrLQ2BRzr6P/arcgis/rest/services/San_Francisco_Bldgs/SceneServer',
     );
     return layer;
   }
@@ -412,7 +417,7 @@ class _ExampleMapState extends State<ExampleMap> {
           ArcgisMap(
             mapStyle: show3dMap ? MapStyle.threeD : MapStyle.twoD,
             apiKey: arcGisApiKey,
-            basemap: BaseMap.osmDarkGray,
+            basemap: BaseMap.arcgisStreets,
             ground: show3dMap ? Ground.worldElevation : null,
             showLabelsBeneathGraphics: true,
             initialCenter: initialCenter,

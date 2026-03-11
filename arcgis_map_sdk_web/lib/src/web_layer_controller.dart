@@ -19,6 +19,9 @@ class WebLayerController {
   final Map<String, JSObject> _layers = {};
   final List<Graphic> _graphicsInView = [];
 
+  // SceneLayers deferred while in 2D mode (MapView can't handle them at all)
+  final List<JsSceneLayer> _deferredSceneLayers = [];
+
   Future<void> initialize() async {
     // Initialize the controller
     print('WebLayerController initialized for mapId: $mapId');
@@ -79,8 +82,11 @@ class WebLayerController {
   }) async {
     final map = (view as JsView).map;
 
-    final layerProperties = {
+    final layerProperties = <String, dynamic>{
       'id': layerId,
+      'elevationInfo': {
+        'mode': options.elevationMode.value,
+      },
     }.jsify() as JSObject;
 
     final graphicsLayer = JsGraphicsLayer(layerProperties);
@@ -99,19 +105,24 @@ class WebLayerController {
     required String url,
     required SceneLayerOptions options,
     required JSObject view,
+    required bool isSceneViewActive,
   }) async {
-    final map = (view as JsView).map;
-
     final layerProperties = {
       'id': layerId,
       'url': url,
     }.jsify() as JSObject;
 
     final sceneLayer = JsSceneLayer(layerProperties);
-
-    // Add to map
-    map.add(sceneLayer);
     _layers[layerId] = sceneLayer as JSObject;
+
+    if (isSceneViewActive) {
+      // Add immediately — SceneView can render it
+      final map = (view as JsView).map;
+      map.add(sceneLayer);
+    } else {
+      // Defer — MapView can't handle SceneLayers at all (even invisible ones)
+      _deferredSceneLayers.add(sceneLayer);
+    }
 
     return SceneLayer(
       id: layerId,
@@ -545,7 +556,15 @@ class WebLayerController {
   }
 
   void switchView(JsView newView, bool isSceneView) {
-    // Handle view switching - transfer layers, etc.
+    // When switching to 3D, flush any SceneLayers that were deferred
+    if (isSceneView && _deferredSceneLayers.isNotEmpty) {
+      final map = newView.map;
+      for (final sceneLayer in _deferredSceneLayers) {
+        map.add(sceneLayer);
+      }
+      print('Added ${_deferredSceneLayers.length} deferred SceneLayer(s)');
+      _deferredSceneLayers.clear();
+    }
     print('View switched to ${isSceneView ? '3D' : '2D'}');
   }
 
