@@ -514,6 +514,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         print('3D Scene view created successfully');
 
         _applyPadding(mapOptions, sceneView);
+        _applyDefaultUi(mapOptions, sceneView);
         _sceneViews[mapId] = sceneView;
         _isSceneViewActive[mapId] = true;
 
@@ -538,6 +539,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         print('2D Map view created successfully');
 
         _applyPadding(mapOptions, mapView);
+        _applyDefaultUi(mapOptions, mapView);
         _mapViews[mapId] = mapView;
         _isSceneViewActive[mapId] = false;
 
@@ -1135,6 +1137,7 @@ console.log("ArcGIS modules loaded via ESM");
           }.jsify()! as JSObject);
 
           _applyPadding(mapOptions, sceneView);
+          _applyDefaultUi(mapOptions, sceneView);
           _sceneViews[mapId] = sceneView;
           _controllers[mapId]?.setSceneView(sceneView);
           _setupClickListener(mapId, sceneView);
@@ -1175,6 +1178,7 @@ console.log("ArcGIS modules loaded via ESM");
           }.jsify()! as JSObject);
 
           _applyPadding(mapOptions, mapView);
+          _applyDefaultUi(mapOptions, mapView);
           _mapViews[mapId] = mapView;
           _controllers[mapId]?.setMapView(mapView);
           _setupClickListener(mapId, mapView);
@@ -1411,6 +1415,35 @@ console.log("ArcGIS modules loaded via ESM");
       }.jsify()! as JSObject;
       view.padding = jsPadding;
     }
+  }
+
+  /// Applies the caller-supplied [DefaultWidget] list to the view's default UI,
+  /// replacing ArcGIS' built-in widget set.
+  ///
+  /// The list is authoritative: passing an empty list strips every default
+  /// widget from the view, and only the widgets in the list are displayed.
+  /// Each widget is then moved to its configured [WidgetPosition]. Widgets
+  /// configured with [WidgetPosition.manual] keep their default slot — the
+  /// consumer is expected to position them at the DOM level.
+  static void _applyDefaultUi(ArcgisMapOptions? mapOptions, JsView view) {
+    if (mapOptions == null) return;
+    final widgets = mapOptions.defaultUiList;
+    final ui = view.ui;
+
+    ui.components = <JSString>[
+      for (final widget in widgets) widget.viewType.value.toJS,
+    ].toJS;
+
+    // Moving a default widget requires the underlying widget instance to
+    // exist, which only happens once the view is ready. Defer the moves
+    // until view.when() resolves, otherwise they silently no-op and the
+    // widget stays at its ArcGIS-default position (compass → top-left).
+    view.when().toDart.then((_) {
+      for (final widget in widgets) {
+        if (widget.position == WidgetPosition.manual) continue;
+        ui.move(widget.viewType.value.toJS, widget.position.value.toJS);
+      }
+    });
   }
 
   /// Moves basemap reference layers (labels) into the map's operational

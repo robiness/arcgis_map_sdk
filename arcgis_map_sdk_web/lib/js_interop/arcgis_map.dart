@@ -26,6 +26,7 @@ extension type JsView._(JSObject _) implements JSObject {
       [JSObject? options]);
   external JSPromise<JSObject?> goTo(JSObject target,
       [JSObject? targetOptions]);
+  external JSPromise<JSObject> when([JSFunction? callback]);
   external JsCollection<JsGraphic> get graphics;
   external JsPoint get center;
   external set popup(JSObject? popup);
@@ -113,6 +114,7 @@ extension type JsDefaultUI._(JSObject _) implements JSObject {
   external set components(JSArray<JSString> value);
   external void add(JSObject widget, [JSString? position]);
   external void remove(JSObject widget);
+  external void move(JSAny widgetOrName, [JSString? position]);
 }
 
 /// Navigation control for views
