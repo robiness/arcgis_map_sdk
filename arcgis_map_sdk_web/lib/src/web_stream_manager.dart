@@ -185,16 +185,27 @@ class WebStreamManager {
   }
 
   void _setupAttributionStream(JsView view) {
-    final controller = StreamController<String>.broadcast();
+    final attribution = JsAttribution({'view': view}.jsify()! as JSObject);
 
-    // Create attribution widget and get text
-    final attribution = JsAttribution({'view': view}.jsify() as JSObject);
+    JsHandle? handle;
+    final controller = StreamController<String>.broadcast(
+      onCancel: () => handle?.remove(),
+    );
 
-    // Initial value
-    controller.add(attribution.attributionText);
+    // Skip the empty initial read (layers may not be loaded yet) and rely on
+    // the watcher to emit the first real value. Otherwise subscribers that
+    // take the first event (e.g. `.take(1)`) would latch onto an empty string.
+    final initial = attribution.attributionText;
+    if (initial.isNotEmpty) controller.add(initial);
 
-    // For now, we'll just return the initial value as attribution doesn't change often
-    // In a full implementation, you could watch for map layer changes
+    handle = attribution.watch(
+      'attributionText',
+      ((JSAny? newValue) {
+        if (newValue == null || controller.isClosed) return;
+        final text = (newValue as JSString).toDart;
+        if (text.isNotEmpty) controller.add(text);
+      }).toJS,
+    );
 
     _attributionTextStreamGroup.add(controller.stream);
   }

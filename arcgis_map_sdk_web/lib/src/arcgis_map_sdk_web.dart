@@ -153,20 +153,31 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<String> attributionText(int mapId) {
-    final controller = StreamController<String>();
     final view =
         _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
-    final attribution = JsAttribution(
-      {'view': view}.jsify() as JSObject,
+    final attribution = JsAttribution({'view': view}.jsify()! as JSObject);
+
+    JsHandle? handle;
+    final controller = StreamController<String>.broadcast(
+      onCancel: () => handle?.remove(),
     );
 
-    // Initial value
-    controller.add(attribution.attributionText);
+    // The attribution text is derived from the view's loaded layers, so the
+    // initial read may be empty. Skip the empty emission and rely on the
+    // watcher below — that way a `.take(1)` subscriber sees the first real
+    // attribution rather than an empty placeholder.
+    final initial = attribution.attributionText;
+    if (initial.isNotEmpty) controller.add(initial);
 
-    // There's no watch handler in the JS interop,
-    // so for now we'll just return the initial value.
-    // TODO: Implement a watch handler to get updates.
+    handle = attribution.watch(
+      'attributionText',
+      ((JSAny? newValue) {
+        if (newValue == null || controller.isClosed) return;
+        final text = (newValue as JSString).toDart;
+        if (text.isNotEmpty) controller.add(text);
+      }).toJS,
+    );
 
     return controller.stream;
   }
@@ -1425,6 +1436,11 @@ console.log("ArcGIS modules loaded via ESM");
   /// Each widget is then moved to its configured [WidgetPosition]. Widgets
   /// configured with [WidgetPosition.manual] keep their default slot — the
   /// consumer is expected to position them at the DOM level.
+  ///
+  /// Note: basemap attribution is required by the Esri (and transitive OSM /
+  /// Community Maps) licences. If the caller omits [DefaultWidgetType.attribution]
+  /// from the list, it is their responsibility to display the attribution text
+  /// elsewhere in the app (e.g. via [ArcgisMapController.attributionText]).
   static void _applyDefaultUi(ArcgisMapOptions? mapOptions, JsView view) {
     if (mapOptions == null) return;
     final widgets = mapOptions.defaultUiList;
