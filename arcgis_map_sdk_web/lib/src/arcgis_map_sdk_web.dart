@@ -4,6 +4,7 @@ import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
+import 'package:arcgis_map_sdk_web/assets.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
@@ -39,7 +40,19 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static void registerWith(Registrar registrar) {
     print('ArcgisMapWeb.registerWith called');
     ArcgisMapPlatform.instance = ArcgisMapWeb();
+    _injectOutlineOverrideCss();
     print('ArcgisMapWeb registered as platform instance');
+  }
+
+  /// Injects the override stylesheet that hides the blue focus outline the
+  /// ArcGIS JS API draws around the map view surface on interaction.
+  static void _injectOutlineOverrideCss() {
+    final link = web.document.createElement('link') as web.HTMLLinkElement;
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = 'assets/packages/arcgis_map_sdk_web/'
+        '${Assets.assets_css_overrides_override_outline_css}';
+    web.document.head?.appendChild(link);
   }
 
   @override
