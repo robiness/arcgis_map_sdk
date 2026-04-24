@@ -1446,18 +1446,22 @@ console.log("ArcGIS modules loaded via ESM");
     final widgets = mapOptions.defaultUiList;
     final ui = view.ui;
 
-    ui.components = <JSString>[
-      for (final widget in widgets) widget.viewType.value.toJS,
-    ].toJS;
+    // Strip Esri's full default component set so the built-in widgets
+    // (zoom, compass, navigation-toggle, attribution) never flash in their
+    // default slots while the view is loading — most visible when a
+    // SceneView is created lazily on a 2D → 3D switch.
+    ui.components = <JSString>[].toJS;
 
-    // Moving a default widget requires the underlying widget instance to
-    // exist, which only happens once the view is ready. Defer the moves
-    // until view.when() resolves, otherwise they silently no-op and the
-    // widget stays at its ArcGIS-default position (compass → top-left).
+    // Add each configured widget back once the view is ready. Passing the
+    // widget name to DefaultUI.add() creates the underlying default widget
+    // atomically at the given position — no components/move two-step, so
+    // no intermediate slot and no timing race with reactive instantiation.
     view.when().toDart.then((_) {
       for (final widget in widgets) {
-        if (widget.position == WidgetPosition.manual) continue;
-        ui.move(widget.viewType.value.toJS, widget.position.value.toJS);
+        final position = widget.position == WidgetPosition.manual
+            ? null
+            : widget.position.value.toJS;
+        ui.add(widget.viewType.value.toJS, position);
       }
     });
   }

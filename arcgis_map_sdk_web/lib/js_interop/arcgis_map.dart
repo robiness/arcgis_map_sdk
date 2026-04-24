@@ -112,8 +112,8 @@ extension type JsMapView._(JSObject _) implements JsView {
 extension type JsDefaultUI._(JSObject _) implements JSObject {
   external JSArray<JSString> get components;
   external set components(JSArray<JSString> value);
-  external void add(JSObject widget, [JSString? position]);
-  external void remove(JSObject widget);
+  external void add(JSAny widgetOrName, [JSString? position]);
+  external void remove(JSAny widgetOrName);
   external void move(JSAny widgetOrName, [JSString? position]);
 }
 
