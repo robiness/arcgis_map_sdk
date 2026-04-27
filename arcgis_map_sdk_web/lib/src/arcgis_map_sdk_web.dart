@@ -152,33 +152,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<String> attributionText(int mapId) {
-    final view =
-        _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
-
-    final attribution = JsAttribution({'view': view}.jsify()! as JSObject);
-
-    JsHandle? handle;
-    final controller = StreamController<String>.broadcast(
-      onCancel: () => handle?.remove(),
-    );
-
-    // The attribution text is derived from the view's loaded layers, so the
-    // initial read may be empty. Skip the empty emission and rely on the
-    // watcher below — that way a `.take(1)` subscriber sees the first real
-    // attribution rather than an empty placeholder.
-    final initial = attribution.attributionText;
-    if (initial.isNotEmpty) controller.add(initial);
-
-    handle = attribution.watch(
-      'attributionText',
-      ((JSAny? newValue) {
-        if (newValue == null || controller.isClosed) return;
-        final text = (newValue as JSString).toDart;
-        if (text.isNotEmpty) controller.add(text);
-      }).toJS,
-    );
-
-    return controller.stream;
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+    return controller.attributionText();
   }
 
   @override
@@ -230,24 +208,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<LatLng> centerPosition(int mapId) {
-    final controller = StreamController<LatLng>.broadcast();
-    final view =
-        _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
-
-    // Get initial center position
-    final center = view.center as JsPoint;
-    controller.add(LatLng(center.latitude, center.longitude));
-
-    // watch() is for property changes; on() is only for events like 'click'
-    final centerHandler = (JSAny? newValue, JSAny? oldValue,
-            JSAny? propertyName, JSAny? target) {
-      final newCenter = view.center as JsPoint;
-      controller.add(LatLng(newCenter.latitude, newCenter.longitude));
-    }.toJS as JSFunction;
-
-    view.watch('center', centerHandler);
-
-    return controller.stream;
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+    return controller.centerPosition();
   }
 
   @override
@@ -354,28 +319,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<BoundingBox> getBounds(int mapId) {
-    final controller = StreamController<BoundingBox>.broadcast();
-    final view =
-        _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
-
-    // Get initial bounds
-    final extent = view.extent;
-    if (extent != null) {
-      controller.add(_extentToBoundingBox(extent));
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
     }
-
-    // watch() is for property changes; on() is only for events like 'click'
-    final extentHandler = (JSAny? newValue, JSAny? oldValue,
-            JSAny? propertyName, JSAny? target) {
-      final newExtent = view.extent;
-      if (newExtent != null) {
-        controller.add(_extentToBoundingBox(newExtent));
-      }
-    }.toJS as JSFunction;
-
-    view.watch('extent', extentHandler);
-
-    return controller.stream;
+    return controller.getBounds();
   }
 
   BoundingBox _extentToBoundingBox(JsExtent extent) {
@@ -622,6 +570,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       '@arcgis/core/Graphic.js',
       '@arcgis/core/geometry/Point.js',
       '@arcgis/core/config.js',
+      '@arcgis/core/core/reactiveUtils.js',
     ];
     final result = await arcgisLoader!
         .importModules(modulePaths.map((p) => p.toJS).toList().toJS)
@@ -654,6 +603,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     window['FeatureLayer'] = modules[6];
     window['Graphic'] = modules[7];
     window['esriConfig'] = modules[9];
+    window['reactiveUtils'] = modules[10];
     window['_arcgisModulesReady'] = true.toJS;
 
     print('ArcGIS modules loaded via \$arcgis.import');

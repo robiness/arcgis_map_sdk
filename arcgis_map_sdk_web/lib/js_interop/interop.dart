@@ -11,6 +11,7 @@ export 'core/attributes.dart';
 // Core definitions (esri.core.*)
 export 'core/collection.dart';
 export 'core/handles.dart';
+export 'core/reactive_utils.dart';
 export 'geometry/camera.dart';
 export 'geometry/extent.dart';
 // Geometry definitions (esri.geometry.*)

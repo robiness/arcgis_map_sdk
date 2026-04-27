@@ -51,16 +51,15 @@ class WebStreamManager {
   void _setupZoomStream(JsView view) {
     final controller = StreamController<double>.broadcast();
 
-    // Initial value
+    // Initial value (reactiveUtils.watch does not fire on initial state)
     controller.add(view.zoom);
 
-    // watch() is for property changes; on() is only for events like 'click'
-    final handler = (JSAny? newValue, JSAny? oldValue, JSAny? propertyName,
-            JSAny? target) {
+    final getter = (() => view.zoom.toJS).toJS;
+    final callback = (JSAny? newValue, JSAny? oldValue) {
       controller.add(view.zoom);
     }.toJS as JSFunction;
 
-    final handle = view.watch('zoom', handler);
+    final handle = reactiveUtils.watch(getter, callback);
     _eventHandles.add(handle);
 
     _zoomStreamGroup.add(controller.stream);
@@ -81,18 +80,17 @@ class WebStreamManager {
   void _setupCenterStream(JsView view) {
     final controller = StreamController<LatLng>.broadcast();
 
-    // Initial value
+    // Initial value (reactiveUtils.watch does not fire on initial state)
     final center = view.center;
     controller.add(LatLng(center.latitude, center.longitude));
 
-    // watch() is for property changes; on() is only for events like 'click'
-    final handler = (JSAny? newValue, JSAny? oldValue, JSAny? propertyName,
-            JSAny? target) {
+    final getter = (() => view.center).toJS;
+    final callback = (JSAny? newValue, JSAny? oldValue) {
       final newCenter = view.center;
       controller.add(LatLng(newCenter.latitude, newCenter.longitude));
     }.toJS as JSFunction;
 
-    final handle = view.watch('center', handler);
+    final handle = reactiveUtils.watch(getter, callback);
     _eventHandles.add(handle);
 
     _centerPositionStreamGroup.add(controller.stream);
@@ -113,16 +111,15 @@ class WebStreamManager {
   void _setupBoundsStream(JsView view) {
     final controller = StreamController<BoundingBox>.broadcast();
 
-    // Initial value
+    // Initial value (reactiveUtils.watch does not fire on initial state)
     final extent = view.extent;
     if (extent != null) {
       final initialBounds = _extentToBoundingBox(extent);
       controller.add(initialBounds);
     }
 
-    // watch() is for property changes; on() is only for events like 'click'
-    final handler = (JSAny? newValue, JSAny? oldValue, JSAny? propertyName,
-            JSAny? target) {
+    final getter = (() => view.extent).toJS;
+    final callback = (JSAny? newValue, JSAny? oldValue) {
       final newExtent = view.extent;
       if (newExtent != null) {
         final newBounds = _extentToBoundingBox(newExtent);
@@ -130,7 +127,7 @@ class WebStreamManager {
       }
     }.toJS as JSFunction;
 
-    final handle = view.watch('extent', handler);
+    final handle = reactiveUtils.watch(getter, callback);
     _eventHandles.add(handle);
 
     _boundsStreamGroup.add(controller.stream);
@@ -186,11 +183,7 @@ class WebStreamManager {
 
   void _setupAttributionStream(JsView view) {
     final attribution = JsAttribution({'view': view}.jsify()! as JSObject);
-
-    JsHandle? handle;
-    final controller = StreamController<String>.broadcast(
-      onCancel: () => handle?.remove(),
-    );
+    final controller = StreamController<String>.broadcast();
 
     // Skip the empty initial read (layers may not be loaded yet) and rely on
     // the watcher to emit the first real value. Otherwise subscribers that
@@ -198,14 +191,15 @@ class WebStreamManager {
     final initial = attribution.attributionText;
     if (initial.isNotEmpty) controller.add(initial);
 
-    handle = attribution.watch(
-      'attributionText',
-      ((JSAny? newValue) {
-        if (newValue == null || controller.isClosed) return;
-        final text = (newValue as JSString).toDart;
-        if (text.isNotEmpty) controller.add(text);
-      }).toJS,
-    );
+    final getter = (() => attribution.attributionText.toJS).toJS;
+    final callback = (JSAny? newValue, JSAny? oldValue) {
+      if (controller.isClosed) return;
+      final text = attribution.attributionText;
+      if (text.isNotEmpty) controller.add(text);
+    }.toJS as JSFunction;
+
+    final handle = reactiveUtils.watch(getter, callback);
+    _eventHandles.add(handle);
 
     _attributionTextStreamGroup.add(controller.stream);
   }
@@ -344,8 +338,21 @@ class WebStreamManager {
 
   // View Switch Management
   void switchView(JsView newView) {
-    // When switching views (2D/3D), we need to recreate streams for the new view
-    // Clear current stream initialization tracking
+    // Snapshot which stream types were active on the old view before we wipe
+    // tracking state, so we can re-attach watchers on the new view. Without
+    // this re-attach, switching 2D <-> 3D removes the old watchers but never
+    // installs new ones, leaving zoom/center/bounds streams silent for the
+    // rest of the session.
+    final hadZoom = _initializedStreams.any((k) => k.startsWith('zoom_'));
+    final hadCenter = _initializedStreams.any((k) => k.startsWith('center_'));
+    final hadBounds = _initializedStreams.any((k) => k.startsWith('bounds_'));
+    final hadAttribution =
+        _initializedStreams.any((k) => k.startsWith('attribution_'));
+    final hadClick = _initializedStreams.any((k) => k.startsWith('click_'));
+    final hadVisibleGraphics =
+        _initializedStreams.any((k) => k.startsWith('visible_graphics_'));
+    final hadHover = _initializedStreams.any((k) => k.startsWith('hover_'));
+
     _initializedStreams.clear();
 
     // Clean up old event handlers
@@ -353,6 +360,16 @@ class WebStreamManager {
       handle.remove();
     }
     _eventHandles.clear();
+
+    // Re-attach previously active streams to the new view (going through the
+    // public getters keeps the dedup tracking consistent).
+    if (hadZoom) getZoom(newView);
+    if (hadCenter) centerPosition(newView);
+    if (hadBounds) getBounds(newView);
+    if (hadAttribution) attributionText(newView);
+    if (hadClick) onClickListener(newView);
+    if (hadVisibleGraphics) visibleGraphics(newView);
+    if (hadHover) isGraphicHoveredStream(newView);
 
     print('Stream manager switched to new view');
   }
