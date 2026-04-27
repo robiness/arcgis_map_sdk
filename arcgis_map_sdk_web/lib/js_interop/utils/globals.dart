@@ -12,6 +12,19 @@ external String jsonStringify(JSAny value);
 @JS('window._arcgisModulesReady')
 external JSAny? get arcgisModulesReady;
 
+/// Global ArcGIS CDN loader exposed by `<script src="https://js.arcgis.com/4.x/">`
+/// since version 4.32. Provides a Promise-based [JsArcgisLoader.importModules]
+/// for resolving module exports without inline JS.
+///
+/// @see https://developers.arcgis.com/javascript/latest/get-started-cdn/
+@JS(r'window.$arcgis')
+external JsArcgisLoader? get arcgisLoader;
+
+extension type JsArcgisLoader._(JSObject _) implements JSObject {
+  @JS('import')
+  external JSPromise<JSArray<JSObject>> importModules(JSArray<JSString> paths);
+}
+
 @JS('esri')
 external JSObject get esri;
 

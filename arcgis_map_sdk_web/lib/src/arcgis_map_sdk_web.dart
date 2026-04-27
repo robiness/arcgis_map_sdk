@@ -34,7 +34,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
   static final Set<String> _registeredViewTypes = {};
-  static Completer<void>? _arcgisModulesCompleter;
 
   /// Registers this class as the default instance of [ArcgisMapPlatform].
   static void registerWith(Registrar registrar) {
@@ -582,9 +581,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   static Future<void> _injectArcGISScripts() async {
-    print('Starting ArcGIS script injection (ESM)...');
+    print('Starting ArcGIS script injection (CDN loader)...');
 
-    // Inject CSS
     final cssLink = web.document.createElement('link') as web.HTMLLinkElement;
     cssLink.rel = 'stylesheet';
     cssLink.href =
@@ -592,54 +590,73 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     web.document.head?.appendChild(cssLink);
     print('CSS injected: ${cssLink.href}');
 
-    // Use ES Modules instead of AMD to avoid RequireJS conflicts with
-    // Flutter's DDC debug mode. The ArcGIS CDN serves ESM at @arcgis/core/.
-    final cdnBase = 'https://js.arcgis.com/$_arcgisVersion/@arcgis/core';
-
+    // Load the official ArcGIS CDN loader as a classic external script. This
+    // exposes `window.$arcgis` (since 4.32) with a Promise-based `import()`
+    // that resolves modules from the optimized CDN bundle. Using an external
+    // `<script src=…>` keeps the page within strict CSP — no inline JS, no
+    // hash maintenance.
+    //
+    // For v4.x the loader must be a classic script (no `type=module`) — its
+    // internal `init.js` reads `document.currentScript.src`, which is `null`
+    // inside module scripts per HTML spec.
+    //
+    // @see https://developers.arcgis.com/javascript/latest/get-started-cdn/
     final script =
         web.document.createElement('script') as web.HTMLScriptElement;
-    script.type = 'module';
-    script.textContent = '''
-import Map from "$cdnBase/Map.js";
-import MapView from "$cdnBase/views/MapView.js";
-import SceneView from "$cdnBase/views/SceneView.js";
-import Attribution from "$cdnBase/widgets/Attribution.js";
-import SceneLayer from "$cdnBase/layers/SceneLayer.js";
-import GraphicsLayer from "$cdnBase/layers/GraphicsLayer.js";
-import FeatureLayer from "$cdnBase/layers/FeatureLayer.js";
-import Graphic from "$cdnBase/Graphic.js";
-import Point from "$cdnBase/geometry/Point.js";
-import esriConfig from "$cdnBase/config.js";
-
-window.esri = {
-  Map: Map,
-  views: { MapView: MapView, SceneView: SceneView },
-  widgets: { Attribution: Attribution },
-  layers: { SceneLayer: SceneLayer, GraphicsLayer: GraphicsLayer, FeatureLayer: FeatureLayer },
-  geometry: { Point: Point },
-  Graphic: Graphic,
-  config: esriConfig
-};
-window.SceneLayer = SceneLayer;
-window.GraphicsLayer = GraphicsLayer;
-window.FeatureLayer = FeatureLayer;
-window.Graphic = Graphic;
-window.esriConfig = esriConfig;
-window._arcgisModulesReady = true;
-console.log("ArcGIS modules loaded via ESM");
-''';
-
+    script.src = 'https://js.arcgis.com/$_arcgisVersion/';
     web.document.head?.appendChild(script);
-    print('ESM module script injected');
+    print('ArcGIS CDN loader script injected: ${script.src}');
 
-    // Wait for the ESM modules to load and execute
-    _arcgisModulesCompleter = Completer<void>();
-    while (arcgisModulesReady?.dartify() != true) {
-      await Future.delayed(const Duration(milliseconds: 100));
+    while (arcgisLoader == null) {
+      await Future.delayed(const Duration(milliseconds: 50));
     }
 
-    _arcgisModulesCompleter!.complete();
-    print('ArcGIS ESM modules loaded and exposed globally');
+    const modulePaths = <String>[
+      '@arcgis/core/Map.js',
+      '@arcgis/core/views/MapView.js',
+      '@arcgis/core/views/SceneView.js',
+      '@arcgis/core/widgets/Attribution.js',
+      '@arcgis/core/layers/SceneLayer.js',
+      '@arcgis/core/layers/GraphicsLayer.js',
+      '@arcgis/core/layers/FeatureLayer.js',
+      '@arcgis/core/Graphic.js',
+      '@arcgis/core/geometry/Point.js',
+      '@arcgis/core/config.js',
+    ];
+    final result = await arcgisLoader!
+        .importModules(modulePaths.map((p) => p.toJS).toList().toJS)
+        .toDart;
+    final modules = result.toDart;
+
+    final esri = JSObject();
+    final views = JSObject();
+    final widgets = JSObject();
+    final layers = JSObject();
+    final geometry = JSObject();
+    esri['Map'] = modules[0];
+    views['MapView'] = modules[1];
+    views['SceneView'] = modules[2];
+    widgets['Attribution'] = modules[3];
+    layers['SceneLayer'] = modules[4];
+    layers['GraphicsLayer'] = modules[5];
+    layers['FeatureLayer'] = modules[6];
+    geometry['Point'] = modules[8];
+    esri['views'] = views;
+    esri['widgets'] = widgets;
+    esri['layers'] = layers;
+    esri['geometry'] = geometry;
+    esri['Graphic'] = modules[7];
+    esri['config'] = modules[9];
+
+    window['esri'] = esri;
+    window['SceneLayer'] = modules[4];
+    window['GraphicsLayer'] = modules[5];
+    window['FeatureLayer'] = modules[6];
+    window['Graphic'] = modules[7];
+    window['esriConfig'] = modules[9];
+    window['_arcgisModulesReady'] = true.toJS;
+
+    print('ArcGIS modules loaded via \$arcgis.import');
   }
 
   bool _isArcGISAPILoaded() {
