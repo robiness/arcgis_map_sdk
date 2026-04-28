@@ -1097,21 +1097,19 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       if (shouldUse3D) {
-        // 2D → 3D
+        // MapView.zoom and SceneView.zoom aren't directly comparable
+        // (tile-LOD vs camera altitude). viewpoint carries scale +
+        // rotation through ArcGIS' projection-aware conversion.
         final mapView = _mapViews[mapId]!;
-        final center = mapView.center;
-        final zoom = mapView.zoom;
-
+        final viewpoint = mapView.viewpoint;
         mapView.container = null;
 
-        // Create SceneView lazily on first switch to 3D
         var sceneView = _sceneViews[mapId];
         if (sceneView == null) {
           sceneView = JsSceneView(<String, dynamic>{
             'container': container,
             'map': sharedMap,
-            'zoom': zoom,
-            'center': [center.longitude, center.latitude],
+            'viewpoint': viewpoint,
           }.jsify()! as JSObject);
 
           _applyPadding(mapOptions, sceneView);
@@ -1119,35 +1117,26 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _sceneViews[mapId] = sceneView;
           _controllers[mapId]?.setSceneView(sceneView);
           _setupClickListener(mapId, sceneView);
-          print('SceneView created lazily');
         } else {
           sceneView.container = container;
-          sceneView.goTo(<String, dynamic>{
-            'center': [center.longitude, center.latitude],
-            'zoom': zoom,
-          }.jsify()! as JSObject);
+          // Matches Esri's "Switch view 2D to 3D" sample.
+          sceneView.viewpoint = viewpoint;
         }
 
         _isSceneViewActive[mapId] = true;
         _setSceneLayersVisible(sharedMap, visible: true);
-        print('Switched to 3D view');
       } else {
-        // 3D → 2D
         final sceneView = _sceneViews[mapId]!;
-        final center = sceneView.center;
-        final zoom = sceneView.zoom;
-
+        final viewpoint = sceneView.viewpoint;
         _setSceneLayersVisible(sharedMap, visible: false);
         sceneView.container = null;
 
-        // Create MapView lazily on first switch to 2D
         var mapView = _mapViews[mapId];
         if (mapView == null) {
           mapView = JsMapView(<String, dynamic>{
             'container': container,
             'map': sharedMap,
-            'zoom': zoom,
-            'center': [center.longitude, center.latitude],
+            'viewpoint': viewpoint,
             if (mapOptions != null && (mapOptions.minZoom > 0 || mapOptions.maxZoom > 0))
               'constraints': <String, dynamic>{
                 if (mapOptions.minZoom > 0) 'minZoom': mapOptions.minZoom,
@@ -1160,23 +1149,27 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _mapViews[mapId] = mapView;
           _controllers[mapId]?.setMapView(mapView);
           _setupClickListener(mapId, mapView);
-          print('MapView created lazily');
         } else {
           mapView.container = container;
-          mapView.goTo(<String, dynamic>{
-            'center': [center.longitude, center.latitude],
-            'zoom': zoom,
-          }.jsify()! as JSObject);
+          mapView.viewpoint = viewpoint;
         }
 
         _isSceneViewActive[mapId] = false;
-        print('Switched to 2D view');
       }
 
-      // Notify the controller about the view change
+      // Defer stream re-attach until the view is ready. On lazy-create,
+      // view.extent/scale are populated asynchronously; eager reads in
+      // _streamManager.switchView() would otherwise throw and leave the
+      // bounds stream attached to the detached old view.
       final controller = _controllers[mapId];
-      if (controller != null) {
-        controller.switchMapStyle(mapStyle);
+      final activeView =
+          shouldUse3D ? _sceneViews[mapId] : _mapViews[mapId];
+      if (controller != null && activeView != null) {
+        activeView.when().toDart.then((_) {
+          controller.switchMapStyle(mapStyle);
+        }).catchError((Object e) {
+          print('Error during deferred view switch: $e');
+        });
       }
     } catch (e) {
       print('Error switching map style: $e');
