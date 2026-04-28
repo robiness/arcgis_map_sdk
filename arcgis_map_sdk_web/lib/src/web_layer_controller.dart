@@ -107,10 +107,16 @@ class WebLayerController {
     required JSObject view,
     required bool isSceneViewActive,
   }) async {
-    final layerProperties = {
+    // SceneLayer styling goes through `renderer`, not a direct `symbol`
+    // property. Wrap the caller's symbol in a SimpleRenderer to apply it.
+    final layerProperties = <String, dynamic>{
       'id': layerId,
       'url': url,
-    }.jsify() as JSObject;
+      'renderer': <String, dynamic>{
+        'type': 'simple',
+        'symbol': options.symbol.toJson(),
+      },
+    }.jsify()! as JSObject;
 
     final sceneLayer = JsSceneLayer(layerProperties);
     _layers[layerId] = sceneLayer as JSObject;
@@ -144,8 +150,7 @@ class WebLayerController {
     if (layer == null) {
       // Try to get from cached layers as fallback
       layer = _layers[layerId];
-      print(
-          'Layer $layerId not found in map, using cached reference: ${layer != null}');
+      print('Layer $layerId not found in map, using cached reference: ${layer != null}');
     }
 
     if (layer == null) {
@@ -182,8 +187,7 @@ class WebLayerController {
 
       await featureLayer.applyEdits(edits).toDart;
     } else {
-      throw Exception(
-          'Layer $layerId is neither a GraphicsLayer nor a FeatureLayer');
+      throw Exception('Layer $layerId is neither a GraphicsLayer nor a FeatureLayer');
     }
 
     // Track for visibility calculations
@@ -207,8 +211,7 @@ class WebLayerController {
     final jsLayer = layer as JsLayer;
     final layerType = jsLayer.type;
     if (layerType != 'graphics') {
-      throw Exception(
-          'Layer $layerId is not a graphics layer (type: $layerType)');
+      throw Exception('Layer $layerId is not a graphics layer (type: $layerType)');
     }
     final graphicsLayer = layer as JsGraphicsLayer;
 
@@ -297,9 +300,7 @@ class WebLayerController {
 
     final jsTarget = target.jsify() as JSObject;
 
-    final options = animationOptions != null
-        ? animationOptions.toMap().jsify() as JSObject
-        : null;
+    final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
 
     await (view as JsView).goTo(jsTarget, options).toDart;
   }
@@ -336,8 +337,7 @@ class WebLayerController {
 
     final target = extentData.jsify() as JSObject;
 
-    final options =
-        padding != null ? {'padding': padding}.jsify() as JSObject : null;
+    final options = padding != null ? {'padding': padding}.jsify() as JSObject : null;
 
     await (view as JsView).goTo(target, options).toDart;
   }
@@ -354,9 +354,7 @@ class WebLayerController {
 
       final target = {'zoom': newZoom}.jsify() as JSObject;
 
-      final options = animationOptions != null
-          ? animationOptions.toMap().jsify() as JSObject
-          : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
 
       await view.goTo(target, options).toDart;
       return true;
@@ -378,9 +376,7 @@ class WebLayerController {
 
       final target = {'zoom': newZoom}.jsify() as JSObject;
 
-      final options = animationOptions != null
-          ? animationOptions.toMap().jsify() as JSObject
-          : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
 
       await view.goTo(target, options).toDart;
       return true;
@@ -392,8 +388,7 @@ class WebLayerController {
 
   // Export and Screenshot
 
-  Future<Uint8List> exportImage(JSObject view,
-      {required bool isSceneView}) async {
+  Future<Uint8List> exportImage(JSObject view, {required bool isSceneView}) async {
     try {
       JSPromise<JSObject> screenshotPromise;
 
@@ -417,8 +412,7 @@ class WebLayerController {
   // Utility Methods
 
   void setMouseCursor(SystemMouseCursor cursor) {
-    final container =
-        web.document.getElementById('map-$mapId') as web.HTMLElement?;
+    final container = web.document.getElementById('map-$mapId') as web.HTMLElement?;
     if (container == null) return;
 
     String cssValue = 'default';
@@ -442,8 +436,7 @@ class WebLayerController {
   }) {
     for (final layer in _layers.values) {
       final jsLayer = layer as JsLayer;
-      if (jsLayer.type == 'graphics' &&
-          (jsLayer as JsGraphicsLayer).id == layerId) {
+      if (jsLayer.type == 'graphics' && (jsLayer as JsGraphicsLayer).id == layerId) {
         final graphicsLayer = jsLayer as JsGraphicsLayer;
         final graphics = graphicsLayer.graphics;
         bool updated = false;
@@ -468,8 +461,7 @@ class WebLayerController {
     required JsView view,
   }) async {
     // Implementation would update the feature layer data
-    print(
-        'FeatureLayer update not fully implemented - use addGraphic/removeGraphic instead');
+    print('FeatureLayer update not fully implemented - use addGraphic/removeGraphic instead');
   }
 
   bool destroyLayer({
@@ -484,7 +476,7 @@ class WebLayerController {
 
       // Cast to layer type for method access
       final jsLayer = layer as JsLayer;
-      
+
       // Remove from map
       map.remove(jsLayer);
 
@@ -630,10 +622,7 @@ class WebLayerController {
 
   List<String> getVisibleGraphicIds(JSObject view) {
     // Extract IDs from visible graphics
-    return _graphicsInView
-        .map((g) => g.getAttributesId())
-        .where((id) => id.isNotEmpty)
-        .toList();
+    return _graphicsInView.map((g) => g.getAttributesId()).where((id) => id.isNotEmpty).toList();
   }
 
   Future<void> updateIsAttributionTextVisible({
