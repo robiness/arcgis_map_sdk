@@ -1127,17 +1127,17 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         final enhancedView = view as JsSceneView;
         final ui = enhancedView.ui;
         if (isAttributionTextVisible) {
-          ui.add('attribution'.toJS as JSObject, 'bottom-right'.toJS);
+          ui.add('attribution'.toJS, 'bottom-right'.toJS);
         } else {
-          ui.remove('attribution'.toJS as JSObject);
+          ui.remove('attribution'.toJS);
         }
       } else {
         final enhancedView = view as JsMapView;
         final ui = enhancedView.ui;
         if (isAttributionTextVisible) {
-          ui.add('attribution'.toJS as JSObject, 'bottom-right'.toJS);
+          ui.add('attribution'.toJS, 'bottom-right'.toJS);
         } else {
-          ui.remove('attribution'.toJS as JSObject);
+          ui.remove('attribution'.toJS);
         }
       }
     } catch (e) {
