@@ -21,4 +21,12 @@ extension type JsReactiveUtils._(JSObject _) implements JSObject {
   ///
   /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-core-reactiveUtils.html#watch
   external JsHandle watch(JSFunction getter, JSFunction callback);
+
+  /// Resolves once [getValue] returns truthy. For "wait until view.ready"
+  /// prefer this over `view.when()` — that one resolves immediately on a
+  /// view that was once ready but is currently transitioning, so callbacks
+  /// fire before the view is actually usable.
+  ///
+  /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-core-reactiveUtils.html#whenOnce
+  external JSPromise<JSAny?> whenOnce(JSFunction getValue);
 }

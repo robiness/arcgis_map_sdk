@@ -1165,7 +1165,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final activeView =
           shouldUse3D ? _sceneViews[mapId] : _mapViews[mapId];
       if (controller != null && activeView != null) {
-        activeView.when().toDart.then((_) {
+        reactiveUtils.whenOnce((() => activeView.ready.toJS).toJS).toDart.then(
+            (_) {
           controller.switchMapStyle(mapStyle);
         }).catchError((Object e) {
           print('Error during deferred view switch: $e');
@@ -1399,7 +1400,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     // widget name to DefaultUI.add() creates the underlying default widget
     // atomically at the given position — no components/move two-step, so
     // no intermediate slot and no timing race with reactive instantiation.
-    view.when().toDart.then((_) {
+    reactiveUtils.whenOnce((() => view.ready.toJS).toJS).toDart.then((_) {
       for (final widget in widgets) {
         final position = widget.position == WidgetPosition.manual
             ? null

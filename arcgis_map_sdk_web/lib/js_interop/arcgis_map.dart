@@ -17,6 +17,7 @@ import 'package:arcgis_map_sdk_web/js_interop/geometry/camera.dart';
 @JS("esri.views.View")
 extension type JsView._(JSObject _) implements JSObject {
   external String get type;
+  external bool get ready;
   external double get zoom;
   external set padding(JSObject padding);
   external JSObject get padding;
