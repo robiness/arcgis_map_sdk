@@ -24,7 +24,6 @@ class WebLayerController {
 
   Future<void> initialize() async {
     // Initialize the controller
-    print('WebLayerController initialized for mapId: $mapId');
   }
 
   // Layer Management Methods
@@ -142,20 +141,10 @@ class WebLayerController {
     required Graphic graphic,
     required JSObject view,
   }) async {
-    // Get the layer from the map
+    // Get the layer from the map, falling back to the cached reference.
     final map = (view as JsView).map;
-    JSObject? layer = map.findLayerById(layerId);
-
-    // If not found in current map, check if it's a FeatureLayer that needs to be treated as GraphicsLayer
+    final layer = map.findLayerById(layerId) ?? _layers[layerId];
     if (layer == null) {
-      // Try to get from cached layers as fallback
-      layer = _layers[layerId];
-      print('Layer $layerId not found in map, using cached reference: ${layer != null}');
-    }
-
-    if (layer == null) {
-      // Debug: Layer not found in map
-      print('Layer $layerId not found in map');
       throw Exception('Layer with id $layerId not found');
     }
 
@@ -454,7 +443,6 @@ class WebLayerController {
     required JsView view,
   }) async {
     // Implementation would update the feature layer data
-    print('FeatureLayer update not fully implemented - use addGraphic/removeGraphic instead');
   }
 
   bool destroyLayer({
@@ -551,7 +539,6 @@ class WebLayerController {
     for (final sceneLayer in _deferredSceneLayers) {
       map.add(sceneLayer);
     }
-    print('Attached ${_deferredSceneLayers.length} SceneLayer(s) for 3D view');
     _deferredSceneLayers.clear();
   }
 
@@ -575,7 +562,6 @@ class WebLayerController {
       _deferredSceneLayers.add(sl);
     }
     if (detached.isNotEmpty) {
-      print('Detached ${detached.length} SceneLayer(s) for 2D view');
     }
   }
 
@@ -631,7 +617,6 @@ class WebLayerController {
       }
     }
 
-    print('Retry load completed for mapId: $mapId');
   }
 
   List<Graphic> getGraphicsInView(JSObject view) {
@@ -655,6 +640,5 @@ class WebLayerController {
   void dispose() {
     _layers.clear();
     _graphicsInView.clear();
-    print('WebLayerController disposed for mapId: $mapId');
   }
 }

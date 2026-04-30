@@ -33,7 +33,6 @@ class WebStreamManager {
   final Set<String> _initializedStreams = {};
 
   Future<void> initialize() async {
-    print('WebStreamManager initialized for mapId: $mapId');
   }
 
   // Zoom Stream Management
@@ -135,12 +134,6 @@ class WebStreamManager {
 
   BoundingBox _extentToBoundingBox(JsExtent extent) {
     final sr = extent.spatialReference;
-    print('[BOUNDS DEBUG] xmin=${extent.xmin}, ymin=${extent.ymin}, '
-        'xmax=${extent.xmax}, ymax=${extent.ymax}');
-    print('[BOUNDS DEBUG] center lat=${extent.center.latitude}, '
-        'lng=${extent.center.longitude}');
-    print('[BOUNDS DEBUG] height=${extent.height}, width=${extent.width}');
-    print('[BOUNDS DEBUG] spatialReference=${jsonStringify(sr)}');
 
     final topRightProps = <String, dynamic>{
       'x': extent.xmax,
@@ -156,10 +149,6 @@ class WebStreamManager {
     lowerLeftProps['spatialReference'] = sr;
     final lowerLeft = JsPoint(lowerLeftProps);
 
-    print('[BOUNDS DEBUG] topRight lat=${topRight.latitude}, '
-        'lng=${topRight.longitude}');
-    print('[BOUNDS DEBUG] lowerLeft lat=${lowerLeft.latitude}, '
-        'lng=${lowerLeft.longitude}');
 
     return BoundingBox(
       height: extent.height,
@@ -371,7 +360,6 @@ class WebStreamManager {
     if (hadVisibleGraphics) visibleGraphics(newView);
     if (hadHover) isGraphicHoveredStream(newView);
 
-    print('Stream manager switched to new view');
   }
 
   // Stream Refresh Methods (for compatibility with old architecture)
@@ -422,6 +410,5 @@ class WebStreamManager {
     // Clear tracking
     _initializedStreams.clear();
 
-    print('WebStreamManager disposed for mapId: $mapId');
   }
 }

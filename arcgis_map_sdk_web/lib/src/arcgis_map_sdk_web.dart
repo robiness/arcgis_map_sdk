@@ -36,10 +36,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   /// Registers this class as the default instance of [ArcgisMapPlatform].
   static void registerWith(Registrar registrar) {
-    print('ArcgisMapWeb.registerWith called');
     ArcgisMapPlatform.instance = ArcgisMapWeb();
     _injectOutlineOverrideCss();
-    print('ArcgisMapWeb registered as platform instance');
   }
 
   /// Injects the override stylesheet that hides the blue focus outline the
@@ -113,7 +111,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
     // SceneLayer should preferably be added to 3D SceneView
     if (!_isSceneViewActive[mapId]!) {
-      print('Warning: SceneLayer works best in 3D mode. Consider switching to 3D view.');
     }
     try {
       return await controller.addSceneLayer(layerId: layerId, url: url, options: options);
@@ -135,7 +132,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     }
     try {
       controller.addViewPadding(padding: padding);
-      print('View padding set for mapId: $mapId');
     } catch (e) {
       print('Error setting view padding: $e');
     }
@@ -155,43 +151,33 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       {required int creationId,
       required PlatformViewCreatedCallback onPlatformViewCreated,
       required ArcgisMapOptions mapOptions}) {
-    print('buildView called with creationId: $creationId');
 
     // Store mapOptions for later use during initialization
     _mapOptions[creationId] = mapOptions;
-    print(
-        'Stored mapOptions for creationId: $creationId, apiKey: ${mapOptions.apiKey != null ? '[PROVIDED]' : '[NULL]'}');
 
     final viewType = 'arcgis-map-$creationId';
 
     // Register the HTML element factory only once
     if (!_registeredViewTypes.contains(viewType)) {
-      print('Registering view factory for: $viewType');
       ui_web.platformViewRegistry.registerViewFactory(viewType, (int viewId) {
-        print('Creating HTML element for viewId: $viewId');
         final mapDiv = web.document.createElement('div') as web.HTMLDivElement;
         mapDiv.id = 'map-$viewId';
         mapDiv.style.width = '100%';
         mapDiv.style.height = '100%';
-        print('HTML element created with id: ${mapDiv.id}');
         return mapDiv;
       });
       _registeredViewTypes.add(viewType);
     } else {
-      print('View factory already registered for: $viewType');
     }
 
-    print('Returning HtmlElementView');
     return HtmlElementView(
       viewType: viewType,
       onPlatformViewCreated: (int id) {
-        print('onPlatformViewCreated called with id: $id');
         // The platform view id can differ from creationId.
         // Remap mapOptions so init(id) finds them under the correct key.
         if (id != creationId && _mapOptions.containsKey(creationId)) {
           _mapOptions[id] = _mapOptions[creationId]!;
           _mapOptions.remove(creationId);
-          print('Remapped mapOptions from creationId: $creationId to platformViewId: $id');
         }
         onPlatformViewCreated(id);
       },
@@ -261,7 +247,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _clickControllers.remove(mapId);
       _mapOptions.remove(mapId);
 
-      print('Disposed map resources for mapId: $mapId');
     } catch (e) {
       print('Error disposing map: $e');
     }
@@ -341,7 +326,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<void> init(int mapId) async {
     try {
-      print('Starting map initialization for mapId: $mapId using new architecture');
 
       // Get the stored mapOptions for this mapId
       final mapOptions = _mapOptions[mapId];
@@ -350,22 +334,17 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       // Wait for ArcGIS API to be loaded
-      print('Waiting for ArcGIS API...');
       await _waitForArcGISAPI();
-      print('ArcGIS API loaded successfully');
 
       // Configure global API key if provided
       if (mapOptions.apiKey != null && mapOptions.apiKey!.isNotEmpty) {
-        print('Configuring global API key for ArcGIS services');
         try {
           // Set the global API key in esriConfig
           esriConfig['apiKey'] = mapOptions.apiKey!.toJS;
-          print('Global API key configured successfully: ${mapOptions.apiKey!.substring(0, 8)}...');
         } catch (e) {
           print('Warning: Failed to set global API key: $e');
         }
       } else {
-        print('No API key provided in mapOptions');
       }
 
       // Create and initialize the new web controller
@@ -381,10 +360,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         if (groundValue != null) 'ground': groundValue,
       };
       final sharedMap = JsEsriMap(mapProperties.jsify()! as JSObject);
-      print('Shared map created with basemap: $basemapValue, ground: $groundValue');
 
       // Wait for the container div to be created by Flutter
-      print('Looking for container: map-$mapId');
       web.Element? container;
 
       // Wait up to 5 seconds for container to appear
@@ -397,7 +374,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       if (container == null) {
         throw Exception('Map container not found for id: map-$mapId after waiting');
       }
-      print('Container found: ${container.id}');
 
       final startIn3D = mapOptions.mapStyle == MapStyle.threeD;
 
@@ -408,7 +384,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       // lazily in switchMapStyle(). Creating both upfront causes the
       // inactive view to fail on 3D-only basemap sublayers.
       if (startIn3D) {
-        print('Creating 3D scene view...');
         final sceneViewProperties = <String, dynamic>{
           'container': container,
           'map': sharedMap,
@@ -416,7 +391,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           'center': [mapOptions.initialCenter.longitude, mapOptions.initialCenter.latitude],
         };
         final sceneView = JsSceneView(sceneViewProperties.jsify()! as JSObject);
-        print('3D Scene view created successfully');
 
         _applyPadding(mapOptions, sceneView);
         _applyDefaultUi(mapOptions, sceneView);
@@ -427,7 +401,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         controller.switchMapStyle(MapStyle.threeD);
         _setupClickListener(mapId, sceneView);
       } else {
-        print('Creating 2D map view...');
         final mapViewProperties = <String, dynamic>{
           'container': container,
           'map': sharedMap,
@@ -441,7 +414,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           if (mapOptions.heading != 0) 'rotation': -mapOptions.heading,
         };
         final mapView = JsMapView(mapViewProperties.jsify()! as JSObject);
-        print('2D Map view created successfully');
 
         _applyPadding(mapOptions, mapView);
         _applyDefaultUi(mapOptions, mapView);
@@ -456,7 +428,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         await _moveReferenceLayersBeneathGraphics(sharedMap);
       }
 
-      print('Map initialization completed for mapId: $mapId');
     } catch (e) {
       print('Error initializing map: $e');
       rethrow;
@@ -476,13 +447,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   static Future<void> _injectArcGISScripts() async {
-    print('Starting ArcGIS script injection (CDN loader)...');
 
     final cssLink = web.document.createElement('link') as web.HTMLLinkElement;
     cssLink.rel = 'stylesheet';
     cssLink.href = 'https://js.arcgis.com/$_arcgisVersion/esri/themes/light/main.css';
     web.document.head?.appendChild(cssLink);
-    print('CSS injected: ${cssLink.href}');
 
     // Load the official ArcGIS CDN loader as a classic external script. This
     // exposes `window.$arcgis` (since 4.32) with a Promise-based `import()`
@@ -498,7 +467,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     final script = web.document.createElement('script') as web.HTMLScriptElement;
     script.src = 'https://js.arcgis.com/$_arcgisVersion/';
     web.document.head?.appendChild(script);
-    print('ArcGIS CDN loader script injected: ${script.src}');
 
     while (arcgisLoader == null) {
       await Future.delayed(const Duration(milliseconds: 50));
@@ -549,14 +517,12 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     window['reactiveUtils'] = modules[10];
     window['_arcgisModulesReady'] = true.toJS;
 
-    print('ArcGIS modules loaded via \$arcgis.import');
   }
 
   bool _isArcGISAPILoaded() {
     try {
       // Check if our AMD modules are loaded and ready using direct property access
       final isLoaded = arcgisModulesReady.dartify() == true;
-      print('ArcGIS API loaded check: $isLoaded');
       return isLoaded;
     } catch (e) {
       print('Error checking ArcGIS API: $e');
@@ -853,7 +819,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         // Ignore view refresh errors
       }
 
-      print('Retry load completed for mapId: $mapId');
     } catch (e) {
       print('Error retrying load: $e');
       rethrow;
@@ -983,13 +948,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   void switchMapStyle(int mapId, MapStyle mapStyle) {
     try {
-      print('Switching map style for mapId: $mapId to: $mapStyle');
 
       final isCurrentlySceneView = _isSceneViewActive[mapId] ?? false;
       final shouldUse3D = mapStyle == MapStyle.threeD;
 
       if (shouldUse3D == isCurrentlySceneView) {
-        print('No view change needed - already in ${shouldUse3D ? '3D' : '2D'} mode');
         return;
       }
 
@@ -1088,7 +1051,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       view.map.basemap = basemapId.toJS;
 
-      print('Basemap changed to: $basemapId');
     } catch (e) {
       print('Error changing basemap: $e');
       rethrow;
@@ -1099,7 +1061,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   Future<void> updateFeatureLayer(
       {required int mapId, required String featureLayerId, required List<Graphic> data}) async {
     // Web implementation - would require feature layer data update
-    print('FeatureLayer update not fully implemented - use addGraphic/removeGraphic instead');
   }
 
   @override
@@ -1298,13 +1259,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     final refLayers = basemap.referenceLayers;
     final items = refLayers.toArray();
     if (items.toDart.isEmpty) {
-      print('No basemap reference layers found to move');
       return;
     }
 
     map.addMany(items, 0);
     refLayers.removeAll();
-    print('Moved ${items.toDart.length} basemap reference layers '
-        'beneath graphics');
   }
 }
