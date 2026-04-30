@@ -434,25 +434,18 @@ class WebLayerController {
     required JSObject view,
     required bool isSceneView,
   }) {
-    for (final layer in _layers.values) {
-      final jsLayer = layer as JsLayer;
-      if (jsLayer.type == 'graphics' && (jsLayer as JsGraphicsLayer).id == layerId) {
-        final graphicsLayer = jsLayer as JsGraphicsLayer;
-        final graphics = graphicsLayer.graphics;
-        bool updated = false;
-        graphics.forEach((JSAny? item) {
-          final g = item as JsGraphic;
-          final attrs = g.attributes;
-          final id = (attrs == null) ? null : (attrs['id'] as JSString?);
-          if (!updated && id != null && id.toDart == graphicId) {
-            final newSymbol = symbol.toJson().jsify() as JSObject;
-            g.symbol = newSymbol;
-            updated = true;
-          }
-        }.toJS);
-        if (updated) return;
+    final layer = _layers[layerId] as JsGraphicsLayer?;
+    if (layer == null || layer.type != 'graphics') return;
+    bool updated = false;
+    layer.graphics.forEach((JSAny? item) {
+      final g = item as JsGraphic;
+      final attrs = g.attributes;
+      final id = (attrs == null) ? null : (attrs['id'] as JSString?);
+      if (!updated && id != null && id.toDart == graphicId) {
+        g.symbol = symbol.toJson().jsify() as JSObject;
+        updated = true;
       }
-    }
+    }.toJS);
   }
 
   Future<void> updateFeatureLayer({

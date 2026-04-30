@@ -224,11 +224,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       // Find and remove the layer
       final layer = view.map.findLayerById(layerId) as JsLayer?;
       if (layer != null) {
-        // Remove from map using enhanced API
-        final enhancedMap = view.map as JsEsriMap;
-        enhancedMap.remove(layer);
-
-        // Destroy the layer
+        view.map.remove(layer);
         layer.destroy();
         return true;
       }
@@ -297,10 +293,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
       
       final screenshotResult = await screenshotPromise.toDart;
-
-      // Extract data URL from the result object
-      final resultObj = screenshotResult as JSObject;
-      final dataUrl = resultObj['dataUrl'] as JSString;
+      final dataUrl = screenshotResult['dataUrl'] as JSString;
       final base64Data =
           dataUrl.toDart.split(',')[1]; // Remove data:image/png;base64,
 
@@ -324,39 +317,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       throw Exception('Map controller not found for mapId: $mapId');
     }
     return controller.getBounds();
-  }
-
-  BoundingBox _extentToBoundingBox(JsExtent extent) {
-    final topRightProps = <String, dynamic>{
-      'x': extent.xmax,
-      'y': extent.ymax,
-    }.jsify() as JSObject;
-    topRightProps['spatialReference'] = extent.spatialReference;
-    final topRight = JsPoint(topRightProps);
-
-    final lowerLeftProps = <String, dynamic>{
-      'x': extent.xmin,
-      'y': extent.ymin,
-    }.jsify() as JSObject;
-    lowerLeftProps['spatialReference'] = extent.spatialReference;
-    final lowerLeft = JsPoint(lowerLeftProps);
-
-    print('[BOUNDS DEBUG] xmin=${extent.xmin}, ymin=${extent.ymin}, '
-        'xmax=${extent.xmax}, ymax=${extent.ymax}');
-    print('[BOUNDS DEBUG] center lat=${extent.center.latitude}, '
-        'lng=${extent.center.longitude}');
-    print('[BOUNDS DEBUG] spatialReference=${jsonStringify(extent.spatialReference)}');
-    print('[BOUNDS DEBUG] topRight lat=${topRight.latitude}, '
-        'lng=${topRight.longitude}');
-    print('[BOUNDS DEBUG] lowerLeft lat=${lowerLeft.latitude}, '
-        'lng=${lowerLeft.longitude}');
-
-    return BoundingBox(
-      height: extent.height,
-      width: extent.width,
-      topRight: LatLng(topRight.latitude, topRight.longitude),
-      lowerLeft: LatLng(lowerLeft.latitude, lowerLeft.longitude),
-    );
   }
 
   @override
@@ -757,18 +717,14 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       // Find and remove the graphic using direct API calls
-      final enhancedLayer = layer as JsGraphicsLayer;
-      final graphics = enhancedLayer.graphics;
-      if (graphics != null) {
-        final items = graphics['items'] as JSArray?;
-        if (items != null) {
-          for (int i = 0; i < items.toDart.length; i++) {
-            final graphic = items.toDart[i] as JSObject;
-            final attributes = graphic['attributes'] as JSObject?;
-            if (attributes != null && attributes['id'] == graphicId.toJS) {
-              enhancedLayer.remove(graphic as JsGraphic);
-              break;
-            }
+      final items = layer.graphics['items'] as JSArray?;
+      if (items != null) {
+        for (int i = 0; i < items.toDart.length; i++) {
+          final graphic = items.toDart[i] as JSObject;
+          final attributes = graphic['attributes'] as JSObject?;
+          if (attributes != null && attributes['id'] == graphicId.toJS) {
+            layer.remove(graphic as JsGraphic);
+            break;
           }
         }
       }
@@ -796,100 +752,91 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         if (layer == null) return;
 
         // Remove graphics using direct API calls with filtering logic
-        final enhancedLayer = layer as JsGraphicsLayer;
-        final graphics = enhancedLayer.graphics;
-        if (graphics != null) {
-          final items = graphics['items'] as JSArray?;
-          if (items != null) {
-            final graphicsToRemove = <JsGraphic>[];
-            for (int i = 0; i < items.toDart.length; i++) {
-              final graphic = items.toDart[i] as JSObject;
-              final attributes = graphic['attributes'] as JSObject?;
-              if (attributes != null) {
-                bool shouldRemove = true;
-                
-                // Check remove criteria
-                if (removeByAttributeKey != null && removeByAttributeValue != null) {
-                  if (attributes[removeByAttributeKey] != removeByAttributeValue.toJS) {
-                    shouldRemove = false;
-                  }
-                }
-                
-                // Check exclude criteria
-                if (excludeAttributeKey != null && excludeAttributeValues != null) {
-                  final attrValue = attributes[excludeAttributeKey];
-                  for (final excludeValue in excludeAttributeValues) {
-                    if (attrValue == excludeValue.toJS) {
-                      shouldRemove = false;
-                      break;
-                    }
-                  }
-                }
-                
-                if (shouldRemove) {
-                  graphicsToRemove.add(graphic as JsGraphic);
+        final items = layer.graphics['items'] as JSArray?;
+        if (items != null) {
+          final graphicsToRemove = <JsGraphic>[];
+          for (int i = 0; i < items.toDart.length; i++) {
+            final graphic = items.toDart[i] as JSObject;
+            final attributes = graphic['attributes'] as JSObject?;
+            if (attributes != null) {
+              bool shouldRemove = true;
+
+              // Check remove criteria
+              if (removeByAttributeKey != null && removeByAttributeValue != null) {
+                if (attributes[removeByAttributeKey] != removeByAttributeValue.toJS) {
+                  shouldRemove = false;
                 }
               }
+
+              // Check exclude criteria
+              if (excludeAttributeKey != null && excludeAttributeValues != null) {
+                final attrValue = attributes[excludeAttributeKey];
+                for (final excludeValue in excludeAttributeValues) {
+                  if (attrValue == excludeValue.toJS) {
+                    shouldRemove = false;
+                    break;
+                  }
+                }
+              }
+
+              if (shouldRemove) {
+                graphicsToRemove.add(graphic as JsGraphic);
+              }
             }
-            
-            // Remove all matching graphics
-            for (final graphic in graphicsToRemove) {
-              enhancedLayer.remove(graphic);
-            }
+          }
+
+          // Remove all matching graphics
+          for (final graphic in graphicsToRemove) {
+            layer.remove(graphic);
           }
         }
       } else {
         // Remove from all graphics layers using direct API calls
-        final enhancedMap = view.map as JsEsriMap;
-        final layers = enhancedMap.layers;
-        final layerItems = layers['items'] as JSArray?;
-        
+        final layerItems = view.map.layers['items'] as JSArray?;
+
         if (layerItems != null) {
           for (int layerIndex = 0; layerIndex < layerItems.toDart.length; layerIndex++) {
             final layer = layerItems.toDart[layerIndex] as JSObject;
             final layerType = layer['type'] as JSString?;
-            
+
             if (layerType?.toDart == 'graphics') {
               final enhancedLayer = layer as JsGraphicsLayer;
-              final graphics = enhancedLayer.graphics;
-              if (graphics != null) {
-                final items = graphics['items'] as JSArray?;
-                if (items != null) {
-                  final graphicsToRemove = <JsGraphic>[];
-                  for (int i = 0; i < items.toDart.length; i++) {
-                    final graphic = items.toDart[i] as JSObject;
-                    final attributes = graphic['attributes'] as JSObject?;
-                    if (attributes != null) {
-                      bool shouldRemove = true;
-                      
-                      // Check remove criteria
-                      if (removeByAttributeKey != null && removeByAttributeValue != null) {
-                        if (attributes[removeByAttributeKey] != removeByAttributeValue.toJS) {
-                          shouldRemove = false;
-                        }
-                      }
-                      
-                      // Check exclude criteria
-                      if (excludeAttributeKey != null && excludeAttributeValues != null) {
-                        final attrValue = attributes[excludeAttributeKey];
-                        for (final excludeValue in excludeAttributeValues) {
-                          if (attrValue == excludeValue.toJS) {
-                            shouldRemove = false;
-                            break;
-                          }
-                        }
-                      }
-                      
-                      if (shouldRemove) {
-                        graphicsToRemove.add(graphic as JsGraphic);
+              final items = enhancedLayer.graphics['items'] as JSArray?;
+              if (items != null) {
+                final graphicsToRemove = <JsGraphic>[];
+                for (int i = 0; i < items.toDart.length; i++) {
+                  final graphic = items.toDart[i] as JSObject;
+                  final attributes = graphic['attributes'] as JSObject?;
+                  if (attributes != null) {
+                    bool shouldRemove = true;
+
+                    // Check remove criteria
+                    if (removeByAttributeKey != null && removeByAttributeValue != null) {
+                      if (attributes[removeByAttributeKey] != removeByAttributeValue.toJS) {
+                        shouldRemove = false;
                       }
                     }
+
+                    // Check exclude criteria
+                    if (excludeAttributeKey != null && excludeAttributeValues != null) {
+                      final attrValue = attributes[excludeAttributeKey];
+                      for (final excludeValue in excludeAttributeValues) {
+                        if (attrValue == excludeValue.toJS) {
+                          shouldRemove = false;
+                          break;
+                        }
+                      }
+                    }
+
+                    if (shouldRemove) {
+                      graphicsToRemove.add(graphic as JsGraphic);
+                    }
                   }
-                  
-                  // Remove all matching graphics
-                  for (final graphic in graphicsToRemove) {
-                    enhancedLayer.remove(graphic);
-                  }
+                }
+
+                // Remove all matching graphics
+                for (final graphic in graphicsToRemove) {
+                  enhancedLayer.remove(graphic);
                 }
               }
             }
@@ -908,9 +855,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Refresh/reload the map and its layers using direct API calls
-      final enhancedMap = view.map as JsEsriMap;
-      final layers = enhancedMap.layers;
-      final layerItems = layers['items'] as JSArray?;
+      final layerItems = view.map.layers['items'] as JSArray?;
       
       if (layerItems != null) {
         for (int i = 0; i < layerItems.toDart.length; i++) {
@@ -1184,9 +1129,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
       final basemapId = baseMap.value;
 
-      // Change basemap using direct property assignment
-      final enhancedMap = view.map as JsEsriMap;
-      enhancedMap.basemap = basemapId.toJS;
+      view.map.basemap = basemapId.toJS;
 
       print('Basemap changed to: $basemapId');
     } catch (e) {
