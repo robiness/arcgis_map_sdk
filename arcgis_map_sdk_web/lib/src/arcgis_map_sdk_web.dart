@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:js_interop';
 import 'dart:ui_web' as ui_web;
 
@@ -110,12 +111,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     }
 
     // SceneLayer should preferably be added to 3D SceneView
-    if (!_isSceneViewActive[mapId]!) {
-    }
     try {
       return await controller.addSceneLayer(layerId: layerId, url: url, options: options);
-    } catch (e) {
-      print('Error creating SceneLayer: $e');
+    } catch (e, stack) {
+      developer.log('Error creating SceneLayer', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       // Still return the layer object even if there was an error
       // The error might be logged by ArcGIS but not necessarily fatal
       return SceneLayer(
@@ -132,8 +131,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     }
     try {
       controller.addViewPadding(padding: padding);
-    } catch (e) {
-      print('Error setting view padding: $e');
+    } catch (e, stack) {
+      developer.log('Error setting view padding', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
     }
   }
 
@@ -206,8 +205,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         return true;
       }
       return false;
-    } catch (e) {
-      print('Error destroying layer: $e');
+    } catch (e, stack) {
+      developer.log('Error destroying layer', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -247,8 +246,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _clickControllers.remove(mapId);
       _mapOptions.remove(mapId);
 
-    } catch (e) {
-      print('Error disposing map: $e');
+    } catch (e, stack) {
+      developer.log('Error disposing map', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
     }
   }
 
@@ -272,8 +271,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final base64Data = dataUrl.toDart.split(',')[1]; // Remove data:image/png;base64,
 
       return base64Decode(base64Data);
-    } catch (e) {
-      print('Error exporting image: $e');
+    } catch (e, stack) {
+      developer.log('Error exporting image', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -341,10 +340,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         try {
           // Set the global API key in esriConfig
           esriConfig['apiKey'] = mapOptions.apiKey!.toJS;
-        } catch (e) {
-          print('Warning: Failed to set global API key: $e');
+        } catch (e, stack) {
+          developer.log('Failed to set global API key', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 900);
         }
-      } else {
       }
 
       // Create and initialize the new web controller
@@ -428,8 +426,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         await _moveReferenceLayersBeneathGraphics(sharedMap);
       }
 
-    } catch (e) {
-      print('Error initializing map: $e');
+    } catch (e, stack) {
+      developer.log('Error initializing map', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -524,8 +522,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       // Check if our AMD modules are loaded and ready using direct property access
       final isLoaded = arcgisModulesReady.dartify() == true;
       return isLoaded;
-    } catch (e) {
-      print('Error checking ArcGIS API: $e');
+    } catch (e, stack) {
+      developer.log('Error checking ArcGIS API', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -573,8 +571,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
       await view.goTo(jsTarget, options).toDart;
-    } catch (e) {
-      print('Error moving camera: $e');
+    } catch (e, stack) {
+      developer.log('Error moving camera', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -613,8 +611,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final options = padding != null ? {'padding': padding}.jsify()! as JSObject : null;
 
       await view.goTo(target, options).toDart;
-    } catch (e) {
-      print('Error moving camera to points: $e');
+    } catch (e, stack) {
+      developer.log('Error moving camera to points', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -663,8 +661,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           }
         }
       }
-    } catch (e) {
-      print('Error removing graphic: $e');
+    } catch (e, stack) {
+      developer.log('Error removing graphic', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -777,8 +775,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           }
         }
       }
-    } catch (e) {
-      print('Error removing graphics: $e');
+    } catch (e, stack) {
+      developer.log('Error removing graphics', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
     }
   }
 
@@ -819,8 +817,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         // Ignore view refresh errors
       }
 
-    } catch (e) {
-      print('Error retrying load: $e');
+    } catch (e, stack) {
+      developer.log('Error retrying load', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -960,7 +958,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final sharedMap = _sharedMaps[mapId];
       final mapOptions = _mapOptions[mapId];
       if (container == null || sharedMap == null) {
-        print('Container or shared map not found for mapId: $mapId');
+        developer.log('Container or shared map not found for mapId: $mapId', name: 'arcgis_map_sdk_web', level: 900);
         return;
       }
 
@@ -1038,8 +1036,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           print('Error during deferred view switch: $e');
         });
       }
-    } catch (e) {
-      print('Error switching map style: $e');
+    } catch (e, stack) {
+      developer.log('Error switching map style', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
     }
   }
 
@@ -1051,8 +1049,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       view.map.basemap = basemapId.toJS;
 
-    } catch (e) {
-      print('Error changing basemap: $e');
+    } catch (e, stack) {
+      developer.log('Error changing basemap', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -1101,8 +1099,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           ui.remove('attribution'.toJS);
         }
       }
-    } catch (e) {
-      print('Error updating attribution visibility: $e');
+    } catch (e, stack) {
+      developer.log('Error updating attribution visibility', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
     }
   }
 
@@ -1133,8 +1131,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       await view.goTo(target, options).toDart;
       return true;
-    } catch (e) {
-      print('Error zooming in: $e');
+    } catch (e, stack) {
+      developer.log('Error zooming in', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -1152,8 +1150,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       await view.goTo(target, options).toDart;
       return true;
-    } catch (e) {
-      print('Error zooming out: $e');
+    } catch (e, stack) {
+      developer.log('Error zooming out', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -1190,8 +1188,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       controller.add(null);
-    } catch (e) {
-      print('Error in click handler: $e');
+    } catch (e, stack) {
+      developer.log('Error in click handler', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       controller.add(null);
     }
   }

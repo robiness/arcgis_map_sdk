@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
@@ -347,8 +348,8 @@ class WebLayerController {
 
       await view.goTo(target, options).toDart;
       return true;
-    } catch (e) {
-      print('Error zooming in: $e');
+    } catch (e, stack) {
+      developer.log('Error zooming in', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -369,8 +370,8 @@ class WebLayerController {
 
       await view.goTo(target, options).toDart;
       return true;
-    } catch (e) {
-      print('Error zooming out: $e');
+    } catch (e, stack) {
+      developer.log('Error zooming out', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -392,8 +393,8 @@ class WebLayerController {
       final base64Data = dataUrl.toDart.split(',')[1];
 
       return base64Decode(base64Data);
-    } catch (e) {
-      print('Error exporting image: $e');
+    } catch (e, stack) {
+      developer.log('Error exporting image', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -468,8 +469,8 @@ class WebLayerController {
       _layers.remove(layerId);
 
       return true;
-    } catch (e) {
-      print('Error destroying layer: $e');
+    } catch (e, stack) {
+      developer.log('Error destroying layer', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }

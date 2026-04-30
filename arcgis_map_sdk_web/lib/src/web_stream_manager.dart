@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
@@ -249,8 +250,8 @@ class WebStreamManager {
 
       // No hit or no attributes
       controller.add(null);
-    } catch (e) {
-      print('Error in click handler: $e');
+    } catch (e, stack) {
+      developer.log('Error in click handler', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       controller.add(null);
     }
   }
