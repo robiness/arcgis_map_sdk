@@ -13,7 +13,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:web/web.dart' as web;
 
-
 class ArcgisMapWeb extends ArcgisMapPlatform {
   // New architecture - use web controllers instead of direct management
   static final Map<int, ArcgisMapWebController> _controllers = {};
@@ -24,7 +23,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static final Map<int, bool> _isSceneViewActive = {};
   static final Map<int, Future Function(MethodCall)> _methodCallHandlers = {};
   static final Map<int, StreamController<Attributes?>> _clickControllers = {};
-  
+
   // Store mapOptions for each map instance
   static final Map<int, ArcgisMapOptions> _mapOptions = {};
 
@@ -55,14 +54,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<FeatureLayer> addFeatureLayer(
-      FeatureLayerOptions options,
-      List<Graphic>? data,
-      void Function(dynamic p1)? onPressed,
-      String? url,
-      int mapId,
-      void Function(double p1)? getZoom,
-      String layerId) async {
+  Future<FeatureLayer> addFeatureLayer(FeatureLayerOptions options, List<Graphic>? data,
+      void Function(dynamic p1)? onPressed, String? url, int mapId, void Function(double p1)? getZoom, String layerId) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -79,7 +72,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> addGraphic(int mapId, String layerId, Graphic graphic) async {
+  Future<void> addGraphic(int mapId, String layerId, Graphic graphic) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -92,8 +85,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<GraphicsLayer> addGraphicsLayer(GraphicsLayerOptions options,
-      int mapId, String layerId, void Function(dynamic p1)? onPressed) async {
+  Future<GraphicsLayer> addGraphicsLayer(
+      GraphicsLayerOptions options, int mapId, String layerId, void Function(dynamic p1)? onPressed) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -120,12 +113,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
     // SceneLayer should preferably be added to 3D SceneView
     if (!_isSceneViewActive[mapId]!) {
-      print(
-          'Warning: SceneLayer works best in 3D mode. Consider switching to 3D view.');
+      print('Warning: SceneLayer works best in 3D mode. Consider switching to 3D view.');
     }
     try {
-      return await controller.addSceneLayer(
-          layerId: layerId, url: url, options: options);
+      return await controller.addSceneLayer(layerId: layerId, url: url, options: options);
     } catch (e) {
       print('Error creating SceneLayer: $e');
       // Still return the layer object even if there was an error
@@ -165,10 +156,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       required PlatformViewCreatedCallback onPlatformViewCreated,
       required ArcgisMapOptions mapOptions}) {
     print('buildView called with creationId: $creationId');
-    
+
     // Store mapOptions for later use during initialization
     _mapOptions[creationId] = mapOptions;
-    print('Stored mapOptions for creationId: $creationId, apiKey: ${mapOptions.apiKey != null ? '[PROVIDED]' : '[NULL]'}');
+    print(
+        'Stored mapOptions for creationId: $creationId, apiKey: ${mapOptions.apiKey != null ? '[PROVIDED]' : '[NULL]'}');
 
     final viewType = 'arcgis-map-$creationId';
 
@@ -218,8 +210,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   bool destroyLayer({required int mapId, required String layerId}) {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Find and remove the layer
       final layer = view.map.findLayerById(layerId) as JsLayer?;
@@ -279,8 +270,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<Uint8List> exportImage(int mapId) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Use takeScreenshot method directly from enhanced view types
       JSPromise<JSObject> screenshotPromise;
@@ -291,11 +281,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         final enhancedView = view as JsMapView;
         screenshotPromise = enhancedView.takeScreenshot();
       }
-      
+
       final screenshotResult = await screenshotPromise.toDart;
       final dataUrl = screenshotResult['dataUrl'] as JSString;
-      final base64Data =
-          dataUrl.toDart.split(',')[1]; // Remove data:image/png;base64,
+      final base64Data = dataUrl.toDart.split(',')[1]; // Remove data:image/png;base64,
 
       return base64Decode(base64Data);
     } catch (e) {
@@ -352,8 +341,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<void> init(int mapId) async {
     try {
-      print(
-          'Starting map initialization for mapId: $mapId using new architecture');
+      print('Starting map initialization for mapId: $mapId using new architecture');
 
       // Get the stored mapOptions for this mapId
       final mapOptions = _mapOptions[mapId];
@@ -365,7 +353,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       print('Waiting for ArcGIS API...');
       await _waitForArcGISAPI();
       print('ArcGIS API loaded successfully');
-      
+
       // Configure global API key if provided
       if (mapOptions.apiKey != null && mapOptions.apiKey!.isNotEmpty) {
         print('Configuring global API key for ArcGIS services');
@@ -407,8 +395,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       if (container == null) {
-        throw Exception(
-            'Map container not found for id: map-$mapId after waiting');
+        throw Exception('Map container not found for id: map-$mapId after waiting');
       }
       print('Container found: ${container.id}');
 
@@ -493,8 +480,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
     final cssLink = web.document.createElement('link') as web.HTMLLinkElement;
     cssLink.rel = 'stylesheet';
-    cssLink.href =
-        'https://js.arcgis.com/$_arcgisVersion/esri/themes/light/main.css';
+    cssLink.href = 'https://js.arcgis.com/$_arcgisVersion/esri/themes/light/main.css';
     web.document.head?.appendChild(cssLink);
     print('CSS injected: ${cssLink.href}');
 
@@ -509,8 +495,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     // inside module scripts per HTML spec.
     //
     // @see https://developers.arcgis.com/javascript/latest/get-started-cdn/
-    final script =
-        web.document.createElement('script') as web.HTMLScriptElement;
+    final script = web.document.createElement('script') as web.HTMLScriptElement;
     script.src = 'https://js.arcgis.com/$_arcgisVersion/';
     web.document.head?.appendChild(script);
     print('ArcGIS CDN loader script injected: ${script.src}');
@@ -532,9 +517,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       '@arcgis/core/config.js',
       '@arcgis/core/core/reactiveUtils.js',
     ];
-    final result = await arcgisLoader!
-        .importModules(modulePaths.map((p) => p.toJS).toList().toJS)
-        .toDart;
+    final result = await arcgisLoader!.importModules(modulePaths.map((p) => p.toJS).toList().toJS).toDart;
     final modules = result.toDart;
 
     final esri = JSObject();
@@ -572,7 +555,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   bool _isArcGISAPILoaded() {
     try {
       // Check if our AMD modules are loaded and ready using direct property access
-      final isLoaded = arcgisModulesReady?.dartify() == true;
+      final isLoaded = arcgisModulesReady.dartify() == true;
       print('ArcGIS API loaded check: $isLoaded');
       return isLoaded;
     } catch (e) {
@@ -599,8 +582,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       int? threeDTilt,
       AnimationOptions? animationOptions}) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       final target = <String, dynamic>{
         'center': [point.longitude, point.latitude],
@@ -608,8 +590,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       };
 
       // For 3D views, set camera properties
-      if (_isSceneViewActive[mapId]! &&
-          (threeDHeading != null || threeDTilt != null)) {
+      if (_isSceneViewActive[mapId]! && (threeDHeading != null || threeDTilt != null)) {
         target['camera'] = <String, dynamic>{
           'position': {
             'longitude': point.longitude,
@@ -623,9 +604,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       final jsTarget = target.jsify() as JSObject;
 
-      final options = animationOptions != null
-          ? animationOptions.toMap().jsify() as JSObject
-          : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
 
       await view.goTo(jsTarget, options).toDart;
     } catch (e) {
@@ -635,15 +614,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> moveCameraToPoints(
-      {required List<LatLng> points,
-      required int mapId,
-      double? padding}) async {
+  Future<void> moveCameraToPoints({required List<LatLng> points, required int mapId, double? padding}) async {
     if (points.isEmpty) return;
 
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Calculate bounds for the points
       double minLat = points.first.latitude;
@@ -669,8 +644,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       final target = extentData.jsify() as JSObject;
 
-      final options =
-          padding != null ? {'padding': padding}.jsify() as JSObject : null;
+      final options = padding != null ? {'padding': padding}.jsify() as JSObject : null;
 
       await view.goTo(target, options).toDart;
     } catch (e) {
@@ -688,10 +662,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  bool polygonContainsPoint(
-      {required String polygonId,
-      required LatLng pointCoordinates,
-      required int mapId}) {
+  bool polygonContainsPoint({required String polygonId, required LatLng pointCoordinates, required int mapId}) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -704,11 +675,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> removeGraphic(
-      int mapId, String layerId, String graphicId) async {
+  Future<void> removeGraphic(int mapId, String layerId, String graphicId) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Find the graphics layer
       final layer = view.map.findLayerById(layerId) as JsGraphicsLayer?;
@@ -743,8 +712,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       String? excludeAttributeKey,
       List<String>? excludeAttributeValues}) {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       if (layerId != null) {
         // Remove graphics from specific layer
@@ -851,19 +819,18 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<void> retryLoad(int mapId) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Refresh/reload the map and its layers using direct API calls
       final layerItems = view.map.layers['items'] as JSArray?;
-      
+
       if (layerItems != null) {
         for (int i = 0; i < layerItems.toDart.length; i++) {
           final layer = layerItems.toDart[i] as JSObject;
           // Try to call refresh or load methods if available
           final refreshMethod = layer['refresh'] as JSFunction?;
           final loadMethod = layer['load'] as JSFunction?;
-          
+
           try {
             if (refreshMethod != null) {
               refreshMethod.callAsFunction(layer);
@@ -875,7 +842,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           }
         }
       }
-      
+
       // Also refresh the view itself if possible
       final viewRefreshMethod = (view as JSObject)['refresh'] as JSFunction?;
       try {
@@ -901,8 +868,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Future<void> setInteraction(int mapId, {required bool isEnabled}) {
-    final view =
-        _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+    final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
     // Set navigation interaction using direct property access
     if (_isSceneViewActive[mapId]!) {
@@ -923,8 +889,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> setLocationDisplayAccuracySymbol(
-      int mapId, Symbol symbol) async {
+  Future<void> setLocationDisplayAccuracySymbol(int mapId, Symbol symbol) async {
     // Web implementation - location display is mainly for mobile GPS
     print('Location display symbols not supported on web');
   }
@@ -936,23 +901,20 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> setLocationDisplayPingAnimationSymbol(
-      int mapId, Symbol symbol) async {
+  Future<void> setLocationDisplayPingAnimationSymbol(int mapId, Symbol symbol) async {
     // Web implementation - location display is mainly for mobile GPS
     print('Location display symbols not supported on web');
   }
 
   @override
-  Future<void> setMethodCallHandler(
-      {required int mapId, required Future Function(MethodCall p1) onCall}) {
+  Future<void> setMethodCallHandler({required int mapId, required Future Function(MethodCall p1) onCall}) {
     _methodCallHandlers[mapId] = onCall;
     return Future.value();
   }
 
   @override
   void setMouseCursor(SystemMouseCursor cursor, int mapId) {
-    final container =
-        web.document.getElementById('map-$mapId') as web.HTMLElement?;
+    final container = web.document.getElementById('map-$mapId') as web.HTMLElement?;
     if (container == null) return;
 
     String cssValue = 'default';
@@ -975,8 +937,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Future<void> setRotation(double angleDegrees, int mapId) {
-    final view =
-        _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+    final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
     if (_isSceneViewActive[mapId]!) {
       // For SceneView, set camera heading
@@ -996,8 +957,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> setUseCourseSymbolOnMovement(
-      int mapId, bool useCourseSymbol) async {
+  Future<void> setUseCourseSymbolOnMovement(int mapId, bool useCourseSymbol) async {
     // Web implementation - course symbols mainly for mobile GPS
     print('Course symbol not supported on web: $useCourseSymbol');
   }
@@ -1107,11 +1067,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       // _streamManager.switchView() would otherwise throw and leave the
       // bounds stream attached to the detached old view.
       final controller = _controllers[mapId];
-      final activeView =
-          shouldUse3D ? _sceneViews[mapId] : _mapViews[mapId];
+      final activeView = shouldUse3D ? _sceneViews[mapId] : _mapViews[mapId];
       if (controller != null && activeView != null) {
-        reactiveUtils.whenOnce((() => activeView.ready.toJS).toJS).toDart.then(
-            (_) {
+        reactiveUtils.whenOnce((() => activeView.ready.toJS).toJS).toDart.then((_) {
           controller.switchMapStyle(mapStyle);
         }).catchError((Object e) {
           print('Error during deferred view switch: $e');
@@ -1125,8 +1083,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<void> toggleBaseMap(int mapId, BaseMap baseMap) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
       final basemapId = baseMap.value;
 
       view.map.basemap = basemapId.toJS;
@@ -1140,20 +1097,14 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Future<void> updateFeatureLayer(
-      {required int mapId,
-      required String featureLayerId,
-      required List<Graphic> data}) async {
+      {required int mapId, required String featureLayerId, required List<Graphic> data}) async {
     // Web implementation - would require feature layer data update
-    print(
-        'FeatureLayer update not fully implemented - use addGraphic/removeGraphic instead');
+    print('FeatureLayer update not fully implemented - use addGraphic/removeGraphic instead');
   }
 
   @override
   void updateGraphicSymbol(
-      {required int mapId,
-      required String layerId,
-      required String graphicId,
-      required Symbol symbol}) {
+      {required int mapId, required String layerId, required String graphicId, required Symbol symbol}) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -1167,11 +1118,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> updateIsAttributionTextVisible(
-      int mapId, bool isAttributionTextVisible) async {
+  Future<void> updateIsAttributionTextVisible(int mapId, bool isAttributionTextVisible) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
 
       // Update attribution visibility using direct UI API access
       if (_isSceneViewActive[mapId]!) {
@@ -1197,8 +1146,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> updateLocationDisplaySourcePositionManually(
-      int mapId, UserPosition position) async {
+  Future<void> updateLocationDisplaySourcePositionManually(int mapId, UserPosition position) async {
     // Web implementation - would need to update location marker manually
     print('Manual location update not implemented for web');
   }
@@ -1212,19 +1160,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<bool> zoomIn(
-      {required int lodFactor,
-      required int mapId,
-      AnimationOptions? animationOptions}) async {
+  Future<bool> zoomIn({required int lodFactor, required int mapId, AnimationOptions? animationOptions}) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
       final currentZoom = view.zoom;
       final newZoom = currentZoom + lodFactor;
 
-      final options = animationOptions != null
-          ? animationOptions.toMap().jsify() as JSObject
-          : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
 
       final target = {'zoom': newZoom}.jsify() as JSObject;
 
@@ -1237,19 +1179,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<bool> zoomOut(
-      {required int lodFactor,
-      required int mapId,
-      AnimationOptions? animationOptions}) async {
+  Future<bool> zoomOut({required int lodFactor, required int mapId, AnimationOptions? animationOptions}) async {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+      final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
       final currentZoom = view.zoom;
       final newZoom = currentZoom - lodFactor;
 
-      final options = animationOptions != null
-          ? animationOptions.toMap().jsify() as JSObject
-          : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
 
       final target = {'zoom': newZoom}.jsify() as JSObject;
 
@@ -1270,8 +1206,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     view.on(eventArray, clickHandler);
   }
 
-  static Future<void> _handleClick(
-      int mapId, JsView view, JSObject event) async {
+  static Future<void> _handleClick(int mapId, JsView view, JSObject event) async {
     final controller = _clickControllers[mapId];
     if (controller == null) return;
 
@@ -1345,9 +1280,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     // no intermediate slot and no timing race with reactive instantiation.
     reactiveUtils.whenOnce((() => view.ready.toJS).toJS).toDart.then((_) {
       for (final widget in widgets) {
-        final position = widget.position == WidgetPosition.manual
-            ? null
-            : widget.position.value.toJS;
+        final position = widget.position == WidgetPosition.manual ? null : widget.position.value.toJS;
         ui.add(widget.viewType.value.toJS, position);
       }
     });
@@ -1355,8 +1288,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   /// Moves basemap reference layers (labels) into the map's operational
   /// layers at index 0 so that graphics layers render on top of them.
-  static Future<void> _moveReferenceLayersBeneathGraphics(
-      JsEsriMap map) async {
+  static Future<void> _moveReferenceLayersBeneathGraphics(JsEsriMap map) async {
     final basemap = map.basemap as JsBasemap;
 
     if (!basemap.loaded) {
@@ -1376,4 +1308,3 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         'beneath graphics');
   }
 }
-
