@@ -268,11 +268,11 @@ extension GroundExt on Ground {
 }
 
 extension ColorExt on Color {
-  int get red255 => red;
+  int get red255 => (r * 255.0).round().clamp(0, 255);
 
-  int get blue255 => blue;
+  int get blue255 => (b * 255.0).round().clamp(0, 255);
 
-  int get green255 => green;
+  int get green255 => (g * 255.0).round().clamp(0, 255);
 }
 
 // endregion
