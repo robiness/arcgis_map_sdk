@@ -6,3 +6,10 @@ analyzer:
     - lib/assets.dart
   errors:
     undefined_prefixed_name: ignore
+
+linter:
+  rules:
+    # The @redeclare annotation this lint asks for is itself marked
+    # @experimental in package:meta, so applying it triggers
+    # experimental_member_use. Re-enable once @redeclare is stable.
+    annotate_redeclares: false
