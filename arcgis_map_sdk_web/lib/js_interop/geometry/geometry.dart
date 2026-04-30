@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Base Geometry class
-/// 
+///
 /// Contains the base Geometry class for all geometry types.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Geometry.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/geometry/extent.dart';

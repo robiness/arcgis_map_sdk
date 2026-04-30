@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - SimpleLineSymbol
-/// 
+///
 /// A symbol used to visualize polylines.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-SimpleLineSymbol.html
+library;
+
 import 'dart:js_interop';
 
 /// Simple line symbol for polyline visualization

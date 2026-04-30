@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Polygon geometry
-/// 
+///
 /// An array of rings where each ring is an array of points.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Polygon.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/geometry/geometry.dart';

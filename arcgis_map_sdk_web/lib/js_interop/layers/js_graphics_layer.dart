@@ -1,14 +1,15 @@
 /// ArcGIS Maps SDK for JavaScript - GraphicsLayer class
-/// 
+///
 /// Contains the GraphicsLayer class for displaying and managing graphics.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-GraphicsLayer.html
-import 'dart:js_interop';
+library;
 
-import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
+import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';
 import 'package:arcgis_map_sdk_web/js_interop/core/collection.dart';
+import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
 
 /// Graphics Layer with complete API
 @JS("esri.layers.GraphicsLayer")

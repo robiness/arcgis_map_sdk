@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Attributes
-/// 
+///
 /// Attribute handling for features and graphics.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-support-Field.html
+library;
+
 import 'dart:js_interop';
 
 /// Attributes for graphics and features

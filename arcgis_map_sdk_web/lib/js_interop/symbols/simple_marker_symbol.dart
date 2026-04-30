@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - SimpleMarkerSymbol
-/// 
+///
 /// A symbol used to visualize points.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-SimpleMarkerSymbol.html
+library;
+
 import 'dart:js_interop';
 
 /// Simple marker symbol for point visualization

@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Global utilities
-/// 
+///
 /// Global functions and utilities for the ArcGIS JS API.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri.html
+library;
+
 import 'dart:js_interop';
 
 /// Global functions and utilities

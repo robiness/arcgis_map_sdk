@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - SimpleFillSymbol
-/// 
+///
 /// A symbol used to visualize polygons.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-SimpleFillSymbol.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/symbols/simple_line_symbol.dart';

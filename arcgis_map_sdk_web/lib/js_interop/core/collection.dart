@@ -1,14 +1,15 @@
 /// ArcGIS Maps SDK for JavaScript - Collection class
-/// 
+///
 /// A generic collection class used throughout the ArcGIS Maps SDK.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Collection.html
+library;
+
 import 'dart:js_interop';
 
 /// Collection type for graphics and layers
 @JS("esri.core.Collection")
-extension type JsCollection<T extends JSAny?>._(JSObject _)
-    implements JSObject {
+extension type JsCollection<T extends JSAny?>._(JSObject _) implements JSObject {
   external int get length;
   external T? getItemAt(int index);
   external void add(T item, [int? index]);

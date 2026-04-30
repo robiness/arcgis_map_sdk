@@ -3,6 +3,8 @@
 /// Contains the Attribution widget for displaying map attribution text.
 ///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-widgets-Attribution.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/core/handles.dart';

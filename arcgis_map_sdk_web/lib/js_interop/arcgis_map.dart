@@ -1,17 +1,19 @@
 /// ArcGIS Maps SDK for JavaScript - Map and MapView classes
-/// 
+///
 /// Contains 2D map and view implementations for the ArcGIS JS API.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-Map.html
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-views-MapView.html
+library;
+
 import 'dart:js_interop';
 
-import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
 import 'package:arcgis_map_sdk_web/js_interop/core/collection.dart';
 import 'package:arcgis_map_sdk_web/js_interop/core/handles.dart';
+import 'package:arcgis_map_sdk_web/js_interop/geometry/camera.dart';
 import 'package:arcgis_map_sdk_web/js_interop/geometry/extent.dart';
 import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';
-import 'package:arcgis_map_sdk_web/js_interop/geometry/camera.dart';
+import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
 
 /// Base view interface
 @JS("esri.views.View")
@@ -23,10 +25,8 @@ extension type JsView._(JSObject _) implements JSObject {
   external JSObject get padding;
   external JsHandle on(JSAny event, JSFunction callback);
   external JsHandle watch(String property, JSFunction callback);
-  external JSPromise<JsHitTestResult> hitTest(JSObject event,
-      [JSObject? options]);
-  external JSPromise<JSObject?> goTo(JSObject target,
-      [JSObject? targetOptions]);
+  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
+  external JSPromise<JSObject?> goTo(JSObject target, [JSObject? targetOptions]);
   external JSPromise<JSObject> when([JSFunction? callback]);
   external JsCollection<JsGraphic> get graphics;
   external JsPoint get center;
@@ -93,8 +93,7 @@ extension type JsMapView._(JSObject _) implements JsView {
   external JSPromise<JSObject?> goTo(JSObject target, [JSObject? options]);
 
   // Hit testing and events
-  external JSPromise<JsHitTestResult> hitTest(JSObject event,
-      [JSObject? options]);
+  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
   external JsHandle on(JSAny event, JSFunction handler);
 
   // Export and screenshot

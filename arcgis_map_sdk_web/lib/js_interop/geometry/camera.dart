@@ -1,9 +1,11 @@
 /// ArcGIS Maps SDK for JavaScript - Camera and Viewpoint
-/// 
+///
 /// Camera positioning and viewpoint classes for 3D views.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-Camera.html
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-Viewpoint.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/geometry/geometry.dart';

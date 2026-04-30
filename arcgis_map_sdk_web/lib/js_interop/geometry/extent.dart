@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Extent geometry
-/// 
+///
 /// The minimum and maximum X and Y coordinates of a bounding box.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Extent.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';

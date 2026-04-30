@@ -3,6 +3,8 @@
 /// Contains the SceneLayer class for displaying 3D scene data.
 /// 
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-SceneLayer.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';

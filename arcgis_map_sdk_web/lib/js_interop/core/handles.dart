@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Handle and event handling
-/// 
+///
 /// Event handling utilities for the ArcGIS JS API.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-core-Handles.html
+library;
+
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';

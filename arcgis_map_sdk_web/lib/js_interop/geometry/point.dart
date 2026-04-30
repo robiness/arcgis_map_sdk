@@ -1,8 +1,10 @@
 /// ArcGIS Maps SDK for JavaScript - Point geometry
-/// 
+///
 /// A location defined by X, Y, and optionally Z coordinates.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-geometry-Point.html
+library;
+
 import 'dart:js_interop';
 
 /// Point geometry for ArcGIS JS API

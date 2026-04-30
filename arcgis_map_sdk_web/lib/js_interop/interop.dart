@@ -3,6 +3,8 @@
 /// This file provides a clean, modular structure for JavaScript interop with
 /// the ArcGIS Maps SDK for JavaScript. It follows the ArcGIS JS API namespace
 /// organization for better maintainability and discoverability.
+library;
+
 
 // Views
 export 'arcgis_map.dart';

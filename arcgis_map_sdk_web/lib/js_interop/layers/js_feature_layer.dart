@@ -1,14 +1,15 @@
 /// ArcGIS Maps SDK for JavaScript - FeatureLayer class
-/// 
+///
 /// Contains the FeatureLayer class for displaying and managing feature data.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-layers-FeatureLayer.html
-import 'dart:js_interop';
+library;
 
-import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
+import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';
 import 'package:arcgis_map_sdk_web/js_interop/core/collection.dart';
+import 'package:arcgis_map_sdk_web/js_interop/js_graphic.dart';
 import 'package:arcgis_map_sdk_web/js_interop/rest/support/feature_set.dart';
 
 /// Feature Layer with complete API
