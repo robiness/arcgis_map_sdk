@@ -12,5 +12,7 @@ import 'package:arcgis_map_sdk_web/js_interop/geometry/extent.dart';
 /// Base geometry interface
 @JS("esri.geometry.Geometry")
 extension type JsGeometry._(JSObject _) implements JSObject {
+  /// Geometry kind discriminator: 'point', 'polyline', 'polygon', etc.
+  external String get type;
   external JsExtent? get extent;
 }

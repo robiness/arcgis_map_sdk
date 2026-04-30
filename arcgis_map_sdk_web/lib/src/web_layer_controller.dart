@@ -61,7 +61,7 @@ class WebLayerController {
       });
     }
 
-    final jsProperties = layerProperties.jsify() as JSObject;
+    final jsProperties = layerProperties.jsify()! as JSObject;
     final featureLayer = JsFeatureLayer(jsProperties);
 
     // Add to map
@@ -87,7 +87,7 @@ class WebLayerController {
       'elevationInfo': {
         'mode': options.elevationMode.value,
       },
-    }.jsify() as JSObject;
+    }.jsify()! as JSObject;
 
     final graphicsLayer = JsGraphicsLayer(layerProperties);
 
@@ -173,7 +173,7 @@ class WebLayerController {
     }
 
     // Convert Dart graphic to JS graphic
-    final graphicData = graphic.toJson().jsify() as JSObject;
+    final graphicData = graphic.toJson().jsify()! as JSObject;
     final jsGraphic = JsGraphic(graphicData);
 
     if (graphicsLayer != null) {
@@ -183,7 +183,7 @@ class WebLayerController {
       // Handle FeatureLayer - use applyEdits
       final edits = {
         'addFeatures': [jsGraphic]
-      }.jsify() as JSObject;
+      }.jsify()! as JSObject;
 
       await featureLayer.applyEdits(edits).toDart;
     } else {
@@ -218,7 +218,7 @@ class WebLayerController {
     // Find and remove the graphic with matching ID
     final graphics = graphicsLayer.graphics;
     graphics.forEach((JSAny? item) {
-      final g = item as JsGraphic;
+      final g = item! as JsGraphic;
       final attrs = g.attributes;
       final id = (attrs == null) ? null : (attrs['id'] as JSString?);
       if (id != null && id.toDart == objectId) {
@@ -298,9 +298,9 @@ class WebLayerController {
       };
     }
 
-    final jsTarget = target.jsify() as JSObject;
+    final jsTarget = target.jsify()! as JSObject;
 
-    final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
+    final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
     await (view as JsView).goTo(jsTarget, options).toDart;
   }
@@ -335,9 +335,9 @@ class WebLayerController {
       'spatialReference': {'wkid': 4326}
     };
 
-    final target = extentData.jsify() as JSObject;
+    final target = extentData.jsify()! as JSObject;
 
-    final options = padding != null ? {'padding': padding}.jsify() as JSObject : null;
+    final options = padding != null ? {'padding': padding}.jsify()! as JSObject : null;
 
     await (view as JsView).goTo(target, options).toDart;
   }
@@ -352,9 +352,9 @@ class WebLayerController {
       final currentZoom = (view as JsView).zoom;
       final newZoom = currentZoom + lodFactor;
 
-      final target = {'zoom': newZoom}.jsify() as JSObject;
+      final target = {'zoom': newZoom}.jsify()! as JSObject;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
       await view.goTo(target, options).toDart;
       return true;
@@ -374,9 +374,9 @@ class WebLayerController {
       final currentZoom = (view as JsView).zoom;
       final newZoom = currentZoom - lodFactor;
 
-      final target = {'zoom': newZoom}.jsify() as JSObject;
+      final target = {'zoom': newZoom}.jsify()! as JSObject;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
       await view.goTo(target, options).toDart;
       return true;
@@ -399,7 +399,7 @@ class WebLayerController {
       }
 
       final screenshotResult = await screenshotPromise.toDart;
-      final dataUrl = screenshotResult['dataUrl'] as JSString;
+      final dataUrl = screenshotResult['dataUrl']! as JSString;
       final base64Data = dataUrl.toDart.split(',')[1];
 
       return base64Decode(base64Data);
@@ -438,11 +438,11 @@ class WebLayerController {
     if (layer == null || layer.type != 'graphics') return;
     bool updated = false;
     layer.graphics.forEach((JSAny? item) {
-      final g = item as JsGraphic;
+      final g = item! as JsGraphic;
       final attrs = g.attributes;
       final id = (attrs == null) ? null : (attrs['id'] as JSString?);
       if (!updated && id != null && id.toDart == graphicId) {
-        g.symbol = symbol.toJson().jsify() as JSObject;
+        g.symbol = symbol.toJson().jsify()! as JSObject;
         updated = true;
       }
     }.toJS);
@@ -500,15 +500,19 @@ class WebLayerController {
         bool result = false;
         graphics.forEach((JSAny? item) {
           if (result) return;
-          final g = item as JsGraphic;
+          final g = item! as JsGraphic;
           final attrs = g.attributes;
           final id = (attrs == null) ? null : (attrs['id'] as JSString?);
           if (id != null && id.toDart == polygonId) {
-            final polygon = g.geometry as JsPolygon;
+            // Extension-type casts on JS interop are runtime no-ops, so we
+            // discriminate on geometry.type before downcasting to JsPolygon.
+            final geometry = g.geometry;
+            if (geometry == null || geometry.type != 'polygon') return;
+            final polygon = geometry as JsPolygon;
             final pointProps = {
               'latitude': pointCoordinates.latitude,
               'longitude': pointCoordinates.longitude,
-            }.jsify() as JSObject;
+            }.jsify()! as JSObject;
             final point = JsPoint(pointProps);
             result = polygon.contains(point);
           }
@@ -560,7 +564,7 @@ class WebLayerController {
     final items = layerItems.toDart;
     final detached = <JsSceneLayer>[];
     for (int i = 0; i < items.length; i++) {
-      final layer = items[i] as JSObject;
+      final layer = items[i]! as JSObject;
       final layerType = (layer['type'] as JSString?)?.toDart;
       if (layerType == 'scene') {
         detached.add(layer as JsSceneLayer);
@@ -585,7 +589,7 @@ class WebLayerController {
       'top': padding.top,
       'right': padding.right,
       'bottom': padding.bottom,
-    }.jsify() as JSObject;
+    }.jsify()! as JSObject;
 
     if (isSceneView) {
       (view as JsSceneView).padding = paddingObject;

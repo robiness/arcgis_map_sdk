@@ -283,7 +283,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       final screenshotResult = await screenshotPromise.toDart;
-      final dataUrl = screenshotResult['dataUrl'] as JSString;
+      final dataUrl = screenshotResult['dataUrl']! as JSString;
       final base64Data = dataUrl.toDart.split(',')[1]; // Remove data:image/png;base64,
 
       return base64Decode(base64Data);
@@ -602,9 +602,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         };
       }
 
-      final jsTarget = target.jsify() as JSObject;
+      final jsTarget = target.jsify()! as JSObject;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
       await view.goTo(jsTarget, options).toDart;
     } catch (e) {
@@ -642,9 +642,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         'spatialReference': {'wkid': 4326}
       };
 
-      final target = extentData.jsify() as JSObject;
+      final target = extentData.jsify()! as JSObject;
 
-      final options = padding != null ? {'padding': padding}.jsify() as JSObject : null;
+      final options = padding != null ? {'padding': padding}.jsify()! as JSObject : null;
 
       await view.goTo(target, options).toDart;
     } catch (e) {
@@ -689,7 +689,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final items = layer.graphics['items'] as JSArray?;
       if (items != null) {
         for (int i = 0; i < items.toDart.length; i++) {
-          final graphic = items.toDart[i] as JSObject;
+          final graphic = items.toDart[i]! as JSObject;
           final attributes = graphic['attributes'] as JSObject?;
           if (attributes != null && attributes['id'] == graphicId.toJS) {
             layer.remove(graphic as JsGraphic);
@@ -724,7 +724,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         if (items != null) {
           final graphicsToRemove = <JsGraphic>[];
           for (int i = 0; i < items.toDart.length; i++) {
-            final graphic = items.toDart[i] as JSObject;
+            final graphic = items.toDart[i]! as JSObject;
             final attributes = graphic['attributes'] as JSObject?;
             if (attributes != null) {
               bool shouldRemove = true;
@@ -764,7 +764,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
         if (layerItems != null) {
           for (int layerIndex = 0; layerIndex < layerItems.toDart.length; layerIndex++) {
-            final layer = layerItems.toDart[layerIndex] as JSObject;
+            final layer = layerItems.toDart[layerIndex]! as JSObject;
             final layerType = layer['type'] as JSString?;
 
             if (layerType?.toDart == 'graphics') {
@@ -773,7 +773,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
               if (items != null) {
                 final graphicsToRemove = <JsGraphic>[];
                 for (int i = 0; i < items.toDart.length; i++) {
-                  final graphic = items.toDart[i] as JSObject;
+                  final graphic = items.toDart[i]! as JSObject;
                   final attributes = graphic['attributes'] as JSObject?;
                   if (attributes != null) {
                     bool shouldRemove = true;
@@ -826,7 +826,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       if (layerItems != null) {
         for (int i = 0; i < layerItems.toDart.length; i++) {
-          final layer = layerItems.toDart[i] as JSObject;
+          final layer = layerItems.toDart[i]! as JSObject;
           // Try to call refresh or load methods if available
           final refreshMethod = layer['refresh'] as JSFunction?;
           final loadMethod = layer['load'] as JSFunction?;
@@ -1166,9 +1166,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final currentZoom = view.zoom;
       final newZoom = currentZoom + lodFactor;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
-      final target = {'zoom': newZoom}.jsify() as JSObject;
+      final target = {'zoom': newZoom}.jsify()! as JSObject;
 
       await view.goTo(target, options).toDart;
       return true;
@@ -1185,9 +1185,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       final currentZoom = view.zoom;
       final newZoom = currentZoom - lodFactor;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify() as JSObject : null;
+      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
 
-      final target = {'zoom': newZoom}.jsify() as JSObject;
+      final target = {'zoom': newZoom}.jsify()! as JSObject;
 
       await view.goTo(target, options).toDart;
       return true;

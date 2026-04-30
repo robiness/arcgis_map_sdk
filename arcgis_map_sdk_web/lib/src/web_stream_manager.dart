@@ -145,14 +145,14 @@ class WebStreamManager {
     final topRightProps = <String, dynamic>{
       'x': extent.xmax,
       'y': extent.ymax,
-    }.jsify() as JSObject;
+    }.jsify()! as JSObject;
     topRightProps['spatialReference'] = sr;
     final topRight = JsPoint(topRightProps);
 
     final lowerLeftProps = <String, dynamic>{
       'x': extent.xmin,
       'y': extent.ymin,
-    }.jsify() as JSObject;
+    }.jsify()! as JSObject;
     lowerLeftProps['spatialReference'] = sr;
     final lowerLeft = JsPoint(lowerLeftProps);
 
