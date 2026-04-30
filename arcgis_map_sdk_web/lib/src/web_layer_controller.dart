@@ -547,17 +547,39 @@ class WebLayerController {
     }
   }
 
-  void switchView(JsView newView, bool isSceneView) {
-    // When switching to 3D, flush any SceneLayers that were deferred
-    if (isSceneView && _deferredSceneLayers.isNotEmpty) {
-      final map = newView.map;
-      for (final sceneLayer in _deferredSceneLayers) {
-        map.add(sceneLayer);
-      }
-      print('Added ${_deferredSceneLayers.length} deferred SceneLayer(s)');
-      _deferredSceneLayers.clear();
+  /// Re-adds every parked SceneLayer to [map]. Pairs with
+  /// [detachSceneLayersFromMap].
+  void attachDeferredSceneLayers(JsEsriMap map) {
+    if (_deferredSceneLayers.isEmpty) return;
+    for (final sceneLayer in _deferredSceneLayers) {
+      map.add(sceneLayer);
     }
-    print('View switched to ${isSceneView ? '3D' : '2D'}');
+    print('Attached ${_deferredSceneLayers.length} SceneLayer(s) for 3D view');
+    _deferredSceneLayers.clear();
+  }
+
+  /// Removes every SceneLayer from [map] and parks them for later
+  /// re-attach. MapView can't render SceneLayers and would log
+  /// "Failed to create layerview" warnings if they remained attached.
+  void detachSceneLayersFromMap(JsEsriMap map) {
+    final layerItems = map.layers['items'] as JSArray?;
+    if (layerItems == null) return;
+    final items = layerItems.toDart;
+    final detached = <JsSceneLayer>[];
+    for (int i = 0; i < items.length; i++) {
+      final layer = items[i] as JSObject;
+      final layerType = (layer['type'] as JSString?)?.toDart;
+      if (layerType == 'scene') {
+        detached.add(layer as JsSceneLayer);
+      }
+    }
+    for (final sl in detached) {
+      map.remove(sl);
+      _deferredSceneLayers.add(sl);
+    }
+    if (detached.isNotEmpty) {
+      print('Detached ${detached.length} SceneLayer(s) for 2D view');
+    }
   }
 
   void addViewPadding({

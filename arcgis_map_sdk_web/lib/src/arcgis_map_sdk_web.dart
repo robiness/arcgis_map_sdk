@@ -1124,11 +1124,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         }
 
         _isSceneViewActive[mapId] = true;
-        _setSceneLayersVisible(sharedMap, visible: true);
+        _controllers[mapId]?.attachDeferredSceneLayers(sharedMap);
       } else {
         final sceneView = _sceneViews[mapId]!;
         final viewpoint = sceneView.viewpoint;
-        _setSceneLayersVisible(sharedMap, visible: false);
+        _controllers[mapId]?.detachSceneLayersFromMap(sharedMap);
         sceneView.container = null;
 
         var mapView = _mapViews[mapId];
@@ -1353,23 +1353,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     } catch (e) {
       print('Error in click handler: $e');
       controller.add(null);
-    }
-  }
-
-  /// Toggles visibility of 3D-only layers (type 'scene') on the shared map.
-  /// Prevents the 2D MapView from failing to create LayerViews for
-  /// unsupported layer types.
-  static void _setSceneLayersVisible(JsEsriMap map, {required bool visible}) {
-    final layers = map.layers;
-    final layerItems = layers['items'] as JSArray?;
-    if (layerItems == null) return;
-
-    for (int i = 0; i < layerItems.toDart.length; i++) {
-      final layer = layerItems.toDart[i] as JSObject;
-      final layerType = (layer['type'] as JSString?)?.toDart;
-      if (layerType == 'scene') {
-        layer['visible'] = visible.toJS;
-      }
     }
   }
 

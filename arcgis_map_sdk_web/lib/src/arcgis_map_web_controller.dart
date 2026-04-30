@@ -338,10 +338,15 @@ class ArcgisMapWebController {
     final shouldUse3D = mapStyle == MapStyle.threeD;
     if (shouldUse3D != _isSceneViewActive) {
       _isSceneViewActive = shouldUse3D;
-      _layerController.switchView(_activeView!, _isSceneViewActive);
       _streamManager.switchView(_activeView!);
     }
   }
+
+  void attachDeferredSceneLayers(JsEsriMap map) =>
+      _layerController.attachDeferredSceneLayers(map);
+
+  void detachSceneLayersFromMap(JsEsriMap map) =>
+      _layerController.detachSceneLayersFromMap(map);
 
   void addViewPadding({required ViewPadding padding}) {
     final view = _activeView;
