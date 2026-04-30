@@ -423,7 +423,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         _sceneViews[mapId] = sceneView;
         _isSceneViewActive[mapId] = true;
 
-        controller.setSceneView(sceneView);
+        controller.sceneView = sceneView;
         controller.switchMapStyle(MapStyle.threeD);
         _setupClickListener(mapId, sceneView);
       } else {
@@ -448,7 +448,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         _mapViews[mapId] = mapView;
         _isSceneViewActive[mapId] = false;
 
-        controller.setMapView(mapView);
+        controller.mapView = mapView;
         _setupClickListener(mapId, mapView);
       }
 
@@ -1020,7 +1020,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _applyPadding(mapOptions, sceneView);
           _applyDefaultUi(mapOptions, sceneView);
           _sceneViews[mapId] = sceneView;
-          _controllers[mapId]?.setSceneView(sceneView);
+          _controllers[mapId]?.sceneView = sceneView;
           _setupClickListener(mapId, sceneView);
         } else {
           sceneView.container = container;
@@ -1052,7 +1052,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
           _applyPadding(mapOptions, mapView);
           _applyDefaultUi(mapOptions, mapView);
           _mapViews[mapId] = mapView;
-          _controllers[mapId]?.setMapView(mapView);
+          _controllers[mapId]?.mapView = mapView;
           _setupClickListener(mapId, mapView);
         } else {
           mapView.container = container;

@@ -18,10 +18,10 @@ class ArcgisMapWebController {
   late final WebStreamManager _streamManager;
 
   // View management
-  JsMapView? _mapView;
-  JsSceneView? _sceneView;
+  JsMapView? mapView;
+  JsSceneView? sceneView;
   bool _isSceneViewActive = false;
-  JsView? get _activeView => _isSceneViewActive ? _sceneView : _mapView;
+  JsView? get _activeView => _isSceneViewActive ? sceneView : mapView;
 
   static Future<ArcgisMapWebController> init(int id) async {
     final controller = ArcgisMapWebController._(mapId: id);
@@ -29,13 +29,6 @@ class ArcgisMapWebController {
     return controller;
   }
 
-  void setMapView(JsMapView mapView) {
-    _mapView = mapView;
-  }
-
-  void setSceneView(JsSceneView sceneView) {
-    _sceneView = sceneView;
-  }
 
   Future<void> _initialize() async {
     await _layerController.initialize();
