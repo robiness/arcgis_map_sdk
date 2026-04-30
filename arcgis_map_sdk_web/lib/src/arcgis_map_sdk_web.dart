@@ -824,9 +824,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> setAutoPanMode(String autoPanMode, int mapId) async {
+  Future<void> setAutoPanMode(String autoPanMode, int mapId) {
     // Web implementation doesn't support AutoPan mode - mainly for mobile GPS
-    print('setAutoPanMode not supported on web: $autoPanMode');
+    throw UnsupportedError('setAutoPanMode is web-unsupported (mobile-only API)');
   }
 
   @override
@@ -846,27 +846,27 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> setLocationDisplay(int mapId, String type) async {
+  Future<void> setLocationDisplay(int mapId, String type) {
     // Web implementation - location display is mainly for mobile GPS
-    print('Location display not fully supported on web: $type');
+    throw UnsupportedError('setLocationDisplay is web-unsupported (mobile-only API)');
   }
 
   @override
-  Future<void> setLocationDisplayAccuracySymbol(int mapId, Symbol symbol) async {
+  Future<void> setLocationDisplayAccuracySymbol(int mapId, Symbol symbol) {
     // Web implementation - location display is mainly for mobile GPS
-    print('Location display symbols not supported on web');
+    throw UnsupportedError('setLocationDisplayAccuracySymbol is web-unsupported (mobile-only API)');
   }
 
   @override
-  Future<void> setLocationDisplayDefaultSymbol(int mapId, Symbol symbol) async {
+  Future<void> setLocationDisplayDefaultSymbol(int mapId, Symbol symbol) {
     // Web implementation - location display is mainly for mobile GPS
-    print('Location display symbols not supported on web');
+    throw UnsupportedError('setLocationDisplayDefaultSymbol is web-unsupported (mobile-only API)');
   }
 
   @override
-  Future<void> setLocationDisplayPingAnimationSymbol(int mapId, Symbol symbol) async {
+  Future<void> setLocationDisplayPingAnimationSymbol(int mapId, Symbol symbol) {
     // Web implementation - location display is mainly for mobile GPS
-    print('Location display symbols not supported on web');
+    throw UnsupportedError('setLocationDisplayPingAnimationSymbol is web-unsupported (mobile-only API)');
   }
 
   @override
@@ -920,27 +920,27 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> setUseCourseSymbolOnMovement(int mapId, bool useCourseSymbol) async {
+  Future<void> setUseCourseSymbolOnMovement(int mapId, bool useCourseSymbol) {
     // Web implementation - course symbols mainly for mobile GPS
-    print('Course symbol not supported on web: $useCourseSymbol');
+    throw UnsupportedError('setUseCourseSymbolOnMovement is web-unsupported (mobile-only API)');
   }
 
   @override
   void setWanderExtentFactor(double factor, int mapId) {
     // Web implementation - this is mainly for mobile GPS tracking
-    print('setWanderExtentFactor not applicable for web: $factor');
+    throw UnsupportedError('setWanderExtentFactor is web-unsupported (mobile-only API)');
   }
 
   @override
-  Future<void> startLocationDisplayDataSource(int mapId) async {
+  Future<void> startLocationDisplayDataSource(int mapId) {
     // Web implementation - would need geolocation API integration
-    print('Location data source not implemented for web');
+    throw UnsupportedError('startLocationDisplayDataSource is web-unsupported (mobile-only API)');
   }
 
   @override
-  Future<void> stopLocationDisplayDataSource(int mapId) async {
+  Future<void> stopLocationDisplayDataSource(int mapId) {
     // Web implementation - would need geolocation API integration
-    print('Location data source not implemented for web');
+    throw UnsupportedError('stopLocationDisplayDataSource is web-unsupported (mobile-only API)');
   }
 
   @override
@@ -1032,8 +1032,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       if (controller != null && activeView != null) {
         reactiveUtils.whenOnce((() => activeView.ready.toJS).toJS).toDart.then((_) {
           controller.switchMapStyle(mapStyle);
-        }).catchError((Object e) {
-          print('Error during deferred view switch: $e');
+        }).catchError((Object e, StackTrace stack) {
+          developer.log('Deferred view switch failed', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
         });
       }
     } catch (e, stack) {
@@ -1105,9 +1105,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
-  Future<void> updateLocationDisplaySourcePositionManually(int mapId, UserPosition position) async {
+  Future<void> updateLocationDisplaySourcePositionManually(int mapId, UserPosition position) {
     // Web implementation - would need to update location marker manually
-    print('Manual location update not implemented for web');
+    throw UnsupportedError('updateLocationDisplaySourcePositionManually is web-unsupported (mobile-only API)');
   }
 
   @override
