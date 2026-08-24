@@ -24,6 +24,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static final Map<int, bool> _isSceneViewActive = {};
   static final Map<int, Future Function(MethodCall)> _methodCallHandlers = {};
   static final Map<int, StreamController<Attributes?>> _clickControllers = {};
+  static final Map<int, StreamController<LatLng>> _mapClickControllers = {};
 
   // Store mapOptions for each map instance
   static final Map<int, ArcgisMapOptions> _mapOptions = {};
@@ -236,6 +237,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       // Clean up legacy controllers
       _clickControllers[mapId]?.close();
+      _mapClickControllers[mapId]?.close();
 
       // Remove from maps
       _mapViews.remove(mapId);
@@ -244,6 +246,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _isSceneViewActive.remove(mapId);
       _methodCallHandlers.remove(mapId);
       _clickControllers.remove(mapId);
+      _mapClickControllers.remove(mapId);
       _mapOptions.remove(mapId);
 
     } catch (e, stack) {
@@ -623,6 +626,14 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _clickControllers[mapId] = StreamController<Attributes?>.broadcast();
     }
     return _clickControllers[mapId]!.stream;
+  }
+
+  @override
+  Stream<LatLng> onMapClickListener(int mapId) {
+    if (!_mapClickControllers.containsKey(mapId)) {
+      _mapClickControllers[mapId] = StreamController<LatLng>.broadcast();
+    }
+    return _mapClickControllers[mapId]!.stream;
   }
 
   @override
@@ -1156,6 +1167,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     }
   }
 
+  /// The view's click event, as far as this plugin reads it. `mapPoint` is
+  /// the click location in map coordinates and is set on every click on the
+  /// map surface (ArcGIS JS API, ViewClickEvent).
   static void _setupClickListener(int mapId, JsView view) {
     final clickHandler = (JSObject event) {
       _handleClick(mapId, view, event);
@@ -1166,6 +1180,15 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   static Future<void> _handleClick(int mapId, JsView view, JSObject event) async {
+    // The coordinates first, independent of any hit test: every click that
+    // carries a map point is a map click, whether or not a graphic sits
+    // under it — the consumer decides what a click means.
+    final mapPoint = _ClickEvent(event).mapPoint;
+    if (mapPoint != null) {
+      _mapClickControllers[mapId]
+          ?.add(LatLng(mapPoint.latitude, mapPoint.longitude));
+    }
+
     final controller = _clickControllers[mapId];
     if (controller == null) return;
 
@@ -1263,4 +1286,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     map.addMany(items, 0);
     refLayers.removeAll();
   }
+}
+
+/// The slice of ArcGIS' `ViewClickEvent` this plugin reads: the click
+/// location in map coordinates. Present on every click on the map surface.
+extension type _ClickEvent(JSObject _) implements JSObject {
+  external JsPoint? get mapPoint;
 }

@@ -124,6 +124,11 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  Stream<LatLng> onMapClickListener(int mapId) {
+    throw UnimplementedError('onMapClickListener() has not been implemented.');
+  }
+
+  @override
   Future<void> updateFeatureLayer({
     required int mapId,
     required String featureLayerId,

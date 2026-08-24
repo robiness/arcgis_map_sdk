@@ -121,6 +121,16 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('onClickListener() has not been implemented.');
   }
 
+  /// The map coordinates of every click on the map, hit or no hit.
+  ///
+  /// Complements [onClickListener], which answers *what* was clicked: this
+  /// stream answers *where*, so a consumer can let a user place something on
+  /// the map. Emitted for every click that carries a map point, including
+  /// clicks on existing graphics — the consumer decides what a click means.
+  Stream<LatLng> onMapClickListener(int mapId) {
+    throw UnimplementedError('onMapClickListener() has not been implemented.');
+  }
+
   Future<void> updateFeatureLayer({
     required int mapId,
     required String featureLayerId,

@@ -122,6 +122,16 @@ class ArcgisMapController {
     return ArcgisMapPlatform.instance.onClickListener(mapId);
   }
 
+  /// The map coordinates of every click on the map, hit or no hit.
+  ///
+  /// Complements [onClickListener], which answers *what* was clicked: this
+  /// stream answers *where*, so a consumer can let a user place something on
+  /// the map (a new site, a measurement point) while panning and zooming
+  /// stay untouched. Web only for now.
+  Stream<LatLng> onMapClickListener() {
+    return ArcgisMapPlatform.instance.onMapClickListener(mapId);
+  }
+
   void setMouseCursor(SystemMouseCursor cursor) {
     ArcgisMapPlatform.instance.setMouseCursor(cursor, mapId);
   }
