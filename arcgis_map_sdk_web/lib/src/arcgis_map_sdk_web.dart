@@ -9,6 +9,7 @@ import 'package:arcgis_map_sdk_web/assets.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
+import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -891,22 +892,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     final container = web.document.getElementById('map-$mapId') as web.HTMLElement?;
     if (container == null) return;
 
-    String cssValue = 'default';
-    if (cursor == SystemMouseCursors.click) {
-      cssValue = 'pointer';
-    } else if (cursor == SystemMouseCursors.grab) {
-      cssValue = 'grab';
-    } else if (cursor == SystemMouseCursors.grabbing) {
-      cssValue = 'grabbing';
-    } else if (cursor == SystemMouseCursors.move) {
-      cssValue = 'move';
-    } else if (cursor == SystemMouseCursors.wait) {
-      cssValue = 'wait';
-    } else if (cursor == SystemMouseCursors.forbidden) {
-      cssValue = 'not-allowed';
-    }
-
-    container.style.cursor = cssValue;
+    container.style.cursor = cssCursorFor(cursor);
   }
 
   @override

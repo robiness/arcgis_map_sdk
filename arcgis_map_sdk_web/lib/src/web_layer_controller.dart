@@ -6,6 +6,7 @@ import 'dart:js_interop';
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
+import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
 import 'package:flutter/services.dart';
 import 'package:web/web.dart' as web;
 
@@ -405,16 +406,7 @@ class WebLayerController {
     final container = web.document.getElementById('map-$mapId') as web.HTMLElement?;
     if (container == null) return;
 
-    String cssValue = 'default';
-    if (cursor == SystemMouseCursors.click) {
-      cssValue = 'pointer';
-    } else if (cursor == SystemMouseCursors.grab) {
-      cssValue = 'grab';
-    } else if (cursor == SystemMouseCursors.grabbing) {
-      cssValue = 'grabbing';
-    }
-
-    container.style.cursor = cssValue;
+    container.style.cursor = cssCursorFor(cursor);
   }
 
   void updateGraphicSymbol({
