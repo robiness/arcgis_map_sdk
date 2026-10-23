@@ -102,6 +102,8 @@ extension SymbolToJsonExtension on Symbol {
         ifMeshSymbol3D: (s) => s.convertToJson(),
         ifTextSymbol: (_) =>
             throw UnsupportedError('TextSymbol is only supported on web'),
+        ifPointSymbol3D: (_) =>
+            throw UnsupportedError('PointSymbol3D is only supported on web'),
       );
 }
 

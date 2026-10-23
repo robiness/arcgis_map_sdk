@@ -8,6 +8,7 @@ enum SymbolType {
   simpleLine,
   mesh3D,
   text,
+  point3D,
 }
 
 extension SymbolTypeExt on SymbolType {
@@ -18,6 +19,7 @@ extension SymbolTypeExt on SymbolType {
     SymbolType.simpleLine: 'simple-line',
     SymbolType.mesh3D: 'mesh-3d',
     SymbolType.text: 'text',
+    SymbolType.point3D: 'point-3d',
   };
 
   String get value => values[this]!;
@@ -33,6 +35,7 @@ abstract class Symbol {
     required R Function(SimpleLineSymbol symbol) ifSimpleLineSymbol,
     required R Function(MeshSymbol3D symbol) ifMeshSymbol3D,
     required R Function(TextSymbol symbol) ifTextSymbol,
+    required R Function(PointSymbol3D symbol) ifPointSymbol3D,
   }) {
     final self = this;
     if (self is SimpleFillSymbol) {
@@ -53,6 +56,9 @@ abstract class Symbol {
     if (self is TextSymbol) {
       return ifTextSymbol(self);
     }
+    if (self is PointSymbol3D) {
+      return ifPointSymbol3D(self);
+    }
 
     throw Exception("Unknown Symbol: $self");
   }
@@ -67,6 +73,90 @@ class MeshSymbol3D extends Symbol {
 
   final Color color;
   final double colorOpacity;
+}
+
+/// A point in a 3D SceneView, drawn as [symbolLayers] stacked at the point
+/// and turned towards the camera however it tilts. A 2D MapView does not draw
+/// it, so a graphic needs a 2D symbol again when the view switches back.
+/// Only supported on web.
+///
+/// https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-PointSymbol3D.html
+class PointSymbol3D extends Symbol {
+  const PointSymbol3D({required this.symbolLayers});
+
+  final List<PointSymbol3DLayer> symbolLayers;
+}
+
+/// One layer of a [PointSymbol3D].
+sealed class PointSymbol3DLayer {
+  const PointSymbol3DLayer();
+}
+
+/// An image in a [PointSymbol3D].
+///
+/// https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-IconSymbol3DLayer.html
+class IconSymbol3DLayer extends PointSymbol3DLayer {
+  const IconSymbol3DLayer({
+    required this.assetUri,
+    required this.size,
+    this.anchorPosition,
+  });
+
+  /// The image, like [PictureMarkerSymbol.assetUri].
+  final String assetUri;
+
+  /// The size of the image in pixels.
+  final double size;
+
+  /// The point of the image that sits on the geometry, as a fraction of the
+  /// image's size from its centre: (0, 0) is the centre, (0, 0.5) the middle
+  /// of the bottom edge. Null keeps the centre.
+  final Offset? anchorPosition;
+}
+
+/// A text in a [PointSymbol3D].
+///
+/// A 3D text cannot be offset on screen like [TextSymbol.yOffset]. With
+/// [verticalAlignment] at the bottom, trailing lines lift it instead, each by
+/// its [lineHeight].
+///
+/// https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-TextSymbol3DLayer.html
+class TextSymbol3DLayer extends PointSymbol3DLayer {
+  const TextSymbol3DLayer({
+    required this.text,
+    required this.color,
+    this.colorOpacity = 1,
+    this.haloColor,
+    this.haloColorOpacity = 1,
+    this.haloSize = 0,
+    this.fontSize = 12,
+    this.fontWeight = TextWeight.normal,
+    this.fontFamily,
+    this.lineHeight = 1,
+    this.horizontalAlignment = TextHorizontalAlignment.center,
+    this.verticalAlignment = TextVerticalAlignment.baseline,
+  });
+
+  final String text;
+  final Color color;
+  final double colorOpacity;
+  final Color? haloColor;
+  final double haloColorOpacity;
+
+  /// The width of the halo in pixels; 0 draws none.
+  final double haloSize;
+
+  /// The font size in pixels.
+  final double fontSize;
+  final TextWeight fontWeight;
+
+  /// Falls back to the ArcGIS default family when null.
+  final String? fontFamily;
+
+  /// The distance between lines, as a multiple of the default.
+  final double lineHeight;
+  final TextHorizontalAlignment horizontalAlignment;
+  final TextVerticalAlignment verticalAlignment;
 }
 
 /// A simple marker on the map

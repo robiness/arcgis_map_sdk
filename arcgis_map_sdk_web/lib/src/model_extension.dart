@@ -96,6 +96,7 @@ extension SymbolToJsonExtension on Symbol {
         ifSimpleLineSymbol: (s) => s.convertToJson(),
         ifMeshSymbol3D: (s) => s.convertToJson(),
         ifTextSymbol: (s) => s.convertToJson(),
+        ifPointSymbol3D: (s) => s.convertToJson(),
       );
 }
 
@@ -166,6 +167,59 @@ extension on TextSymbol {
         },
         'xoffset': '${xOffset}px',
         'yoffset': '${yOffset}px',
+        'horizontalAlignment': horizontalAlignment.value,
+        'verticalAlignment': verticalAlignment.value,
+      };
+}
+
+extension on PointSymbol3D {
+  Map<String, dynamic> convertToJson() => <String, dynamic>{
+        'type': 'point-3d',
+        'symbolLayers': [
+          for (final layer in symbolLayers)
+            switch (layer) {
+              IconSymbol3DLayer() => layer.convertToJson(),
+              TextSymbol3DLayer() => layer.convertToJson(),
+            },
+        ],
+      };
+}
+
+extension on IconSymbol3DLayer {
+  Map<String, dynamic> convertToJson() => <String, dynamic>{
+        'type': 'icon',
+        'resource': {'href': assetUri},
+        'size': '${size}px',
+        if (anchorPosition != null) ...{
+          'anchor': 'relative',
+          'anchorPosition': {'x': anchorPosition!.dx, 'y': anchorPosition!.dy},
+        },
+      };
+}
+
+extension on TextSymbol3DLayer {
+  Map<String, dynamic> convertToJson() => <String, dynamic>{
+        'type': 'text',
+        'text': text,
+        'material': {
+          'color': [color.red255, color.green255, color.blue255, colorOpacity],
+        },
+        if (haloColor != null)
+          'halo': {
+            'color': [
+              haloColor!.red255,
+              haloColor!.green255,
+              haloColor!.blue255,
+              haloColorOpacity,
+            ],
+            'size': '${haloSize}px',
+          },
+        'font': <String, dynamic>{
+          'weight': fontWeight.value,
+          if (fontFamily != null) 'family': fontFamily,
+        },
+        'size': '${fontSize}px',
+        'lineHeight': lineHeight,
         'horizontalAlignment': horizontalAlignment.value,
         'verticalAlignment': verticalAlignment.value,
       };
