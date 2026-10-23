@@ -100,6 +100,8 @@ extension SymbolToJsonExtension on Symbol {
         ifPictureMarkerSymbol: (s) => s.convertToJson(),
         ifSimpleLineSymbol: (s) => s.convertToJson(),
         ifMeshSymbol3D: (s) => s.convertToJson(),
+        ifTextSymbol: (_) =>
+            throw UnsupportedError('TextSymbol is only supported on web'),
       );
 }
 

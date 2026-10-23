@@ -95,6 +95,7 @@ extension SymbolToJsonExtension on Symbol {
         ifPictureMarkerSymbol: (s) => s.convertToJson(),
         ifSimpleLineSymbol: (s) => s.convertToJson(),
         ifMeshSymbol3D: (s) => s.convertToJson(),
+        ifTextSymbol: (s) => s.convertToJson(),
       );
 }
 
@@ -142,6 +143,31 @@ extension on PictureMarkerSymbol {
         'height': '${height}px',
         'xoffset': '${xOffset}px',
         'yoffset': '${yOffset}px',
+      };
+}
+
+extension on TextSymbol {
+  Map<String, dynamic> convertToJson() => <String, dynamic>{
+        'type': 'text',
+        'text': text,
+        'color': [color.red255, color.green255, color.blue255, colorOpacity],
+        if (haloColor != null)
+          'haloColor': [
+            haloColor!.red255,
+            haloColor!.green255,
+            haloColor!.blue255,
+            haloColorOpacity,
+          ],
+        'haloSize': '${haloSize}px',
+        'font': <String, dynamic>{
+          'size': '${fontSize}px',
+          'weight': fontWeight.value,
+          if (fontFamily != null) 'family': fontFamily,
+        },
+        'xoffset': '${xOffset}px',
+        'yoffset': '${yOffset}px',
+        'horizontalAlignment': horizontalAlignment.value,
+        'verticalAlignment': verticalAlignment.value,
       };
 }
 

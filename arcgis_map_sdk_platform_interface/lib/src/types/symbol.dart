@@ -7,6 +7,7 @@ enum SymbolType {
   simpleFill,
   simpleLine,
   mesh3D,
+  text,
 }
 
 extension SymbolTypeExt on SymbolType {
@@ -16,6 +17,7 @@ extension SymbolTypeExt on SymbolType {
     SymbolType.simpleFill: 'simple-fill',
     SymbolType.simpleLine: 'simple-line',
     SymbolType.mesh3D: 'mesh-3d',
+    SymbolType.text: 'text',
   };
 
   String get value => values[this]!;
@@ -30,6 +32,7 @@ abstract class Symbol {
     required R Function(PictureMarkerSymbol symbol) ifPictureMarkerSymbol,
     required R Function(SimpleLineSymbol symbol) ifSimpleLineSymbol,
     required R Function(MeshSymbol3D symbol) ifMeshSymbol3D,
+    required R Function(TextSymbol symbol) ifTextSymbol,
   }) {
     final self = this;
     if (self is SimpleFillSymbol) {
@@ -46,6 +49,9 @@ abstract class Symbol {
     }
     if (self is MeshSymbol3D) {
       return ifMeshSymbol3D(self);
+    }
+    if (self is TextSymbol) {
+      return ifTextSymbol(self);
     }
 
     throw Exception("Unknown Symbol: $self");
@@ -108,6 +114,110 @@ class PictureMarkerSymbol extends Symbol {
   final double height;
   final int xOffset;
   final int yOffset;
+}
+
+/// Text drawn at a point, e.g. a label next to a marker.
+///
+/// The [haloColor] outlines the glyphs so the text stays readable on any
+/// basemap. [xOffset] and [yOffset] are in pixels; a positive [yOffset] moves
+/// the text up. With [verticalAlignment] set to [TextVerticalAlignment.bottom]
+/// the bottom of the text sits at the point plus the offset.
+///
+/// The font is resolved from the ArcGIS font service, so [fontFamily] must be
+/// one of the families it hosts, not a font loaded by the app.
+/// Only supported on web.
+///
+/// https://developers.arcgis.com/javascript/latest/api-reference/esri-symbols-TextSymbol.html
+class TextSymbol extends Symbol {
+  const TextSymbol({
+    required this.text,
+    required this.color,
+    this.colorOpacity = 1,
+    this.haloColor,
+    this.haloColorOpacity = 1,
+    this.haloSize = 0,
+    this.fontSize = 12,
+    this.fontWeight = TextWeight.normal,
+    this.fontFamily,
+    this.xOffset = 0,
+    this.yOffset = 0,
+    this.horizontalAlignment = TextHorizontalAlignment.center,
+    this.verticalAlignment = TextVerticalAlignment.baseline,
+  });
+
+  final String text;
+  final Color color;
+  final double colorOpacity;
+  final Color? haloColor;
+  final double haloColorOpacity;
+
+  /// The width of the halo in pixels; 0 draws none.
+  final double haloSize;
+
+  /// The font size in pixels.
+  final double fontSize;
+  final TextWeight fontWeight;
+
+  /// Falls back to the ArcGIS default family when null.
+  final String? fontFamily;
+  final double xOffset;
+  final double yOffset;
+  final TextHorizontalAlignment horizontalAlignment;
+  final TextVerticalAlignment verticalAlignment;
+}
+
+enum TextWeight {
+  normal,
+  bold,
+  bolder,
+  lighter,
+}
+
+extension TextWeightExt on TextWeight {
+  static const values = <TextWeight, String>{
+    TextWeight.normal: 'normal',
+    TextWeight.bold: 'bold',
+    TextWeight.bolder: 'bolder',
+    TextWeight.lighter: 'lighter',
+  };
+
+  String get value => values[this]!;
+}
+
+enum TextHorizontalAlignment {
+  left,
+  right,
+  center,
+  justify,
+}
+
+extension TextHorizontalAlignmentExt on TextHorizontalAlignment {
+  static const values = <TextHorizontalAlignment, String>{
+    TextHorizontalAlignment.left: 'left',
+    TextHorizontalAlignment.right: 'right',
+    TextHorizontalAlignment.center: 'center',
+    TextHorizontalAlignment.justify: 'justify',
+  };
+
+  String get value => values[this]!;
+}
+
+enum TextVerticalAlignment {
+  baseline,
+  top,
+  middle,
+  bottom,
+}
+
+extension TextVerticalAlignmentExt on TextVerticalAlignment {
+  static const values = <TextVerticalAlignment, String>{
+    TextVerticalAlignment.baseline: 'baseline',
+    TextVerticalAlignment.top: 'top',
+    TextVerticalAlignment.middle: 'middle',
+    TextVerticalAlignment.bottom: 'bottom',
+  };
+
+  String get value => values[this]!;
 }
 
 /// Set the [fillColor] and other attributes of the polygon displayed in the map
