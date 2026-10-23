@@ -541,11 +541,22 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Stream<bool> isGraphicHoveredStream(int mapId) {
-    // Web implementation - would need hover event handling
-    // Return stream that emits false for now
-    final controller = StreamController<bool>.broadcast();
-    controller.add(false);
-    return controller.stream;
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    return controller.isGraphicHoveredStream();
+  }
+
+  @override
+  Stream<Attributes?> hoveredGraphicStream(int mapId) {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    return controller.hoveredGraphicStream();
   }
 
   @override

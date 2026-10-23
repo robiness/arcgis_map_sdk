@@ -22,6 +22,8 @@ class WebStreamManager {
   final StreamGroup<List<String>> _visibleGraphicsStreamGroup =
       StreamGroup.broadcast();
   final StreamGroup<bool> _graphicHoveredStreamGroup = StreamGroup.broadcast();
+  final StreamGroup<Attributes?> _hoveredGraphicStreamGroup =
+      StreamGroup.broadcast();
 
   // Event handles for cleanup
   final List<JsHandle> _eventHandles = [];
@@ -283,32 +285,48 @@ class WebStreamManager {
 
   // Graphic Hovered Stream Management
   Stream<bool> isGraphicHoveredStream(JsView view) {
+    _ensureHoverStreams(view);
+    return _graphicHoveredStreamGroup.stream;
+  }
+
+  Stream<Attributes?> hoveredGraphicStream(JsView view) {
+    _ensureHoverStreams(view);
+    return _hoveredGraphicStreamGroup.stream;
+  }
+
+  /// Both hover streams share one pointer-move handler, so a pointer move
+  /// costs one hit test however many of them are listened to.
+  void _ensureHoverStreams(JsView view) {
     final streamKey = 'hover_${view.hashCode}';
 
     if (!_initializedStreams.contains(streamKey)) {
       _setupHoverStream(view);
       _initializedStreams.add(streamKey);
     }
-
-    return _graphicHoveredStreamGroup.stream;
   }
 
   void _setupHoverStream(JsView view) {
-    final controller = StreamController<bool>.broadcast();
+    final hovered = StreamController<bool>.broadcast();
+    final hoveredGraphic = StreamController<Attributes?>.broadcast();
 
     // Set up mouse move handler for hover detection
     final moveHandler = (JSObject event) {
-      _handleHoverEvent(event, controller, view);
+      _handleHoverEvent(event, hovered, hoveredGraphic, view);
     }.toJS as JSFunction;
 
     final handle = view.on(['pointer-move'.toJS].toJS, moveHandler);
     _eventHandles.add(handle);
 
-    _graphicHoveredStreamGroup.add(controller.stream);
+    _graphicHoveredStreamGroup.add(hovered.stream);
+    _hoveredGraphicStreamGroup.add(hoveredGraphic.stream);
   }
 
   Future<void> _handleHoverEvent(
-      JSObject event, StreamController<bool> controller, JsView view) async {
+    JSObject event,
+    StreamController<bool> hovered,
+    StreamController<Attributes?> hoveredGraphic,
+    JsView view,
+  ) async {
     try {
       // All view types have the same hitTest method
       final hitTestPromise = view.hitTest(event);
@@ -316,14 +334,26 @@ class WebStreamManager {
       final hitTestResult = await hitTestPromise.toDart;
       final results = hitTestResult.results;
 
-      final hasGraphic = results != null &&
-          results.toDart.isNotEmpty &&
-          results.toDart[0].graphic != null;
+      // Only graphics the app added count: the basemap's vector tiles are
+      // hit too, which would make the whole map look hoverable.
+      final graphic = results?.toDart
+          .where((result) => result.layer?.type == 'graphics')
+          .firstOrNull
+          ?.graphic;
 
-      controller.add(hasGraphic);
+      hovered.add(graphic != null);
+      hoveredGraphic.add(_attributesOf(graphic));
     } catch (e) {
-      controller.add(false);
+      hovered.add(false);
+      hoveredGraphic.add(null);
     }
+  }
+
+  static Attributes? _attributesOf(JSObject? graphic) {
+    final jsAttributes = graphic?['attributes'] as JSObject?;
+    final data = jsAttributes.dartify();
+    if (data is! Map) return null;
+    return Attributes(Map<String, dynamic>.from(data));
   }
 
   // View Switch Management
@@ -398,6 +428,7 @@ class WebStreamManager {
     _onClickStreamGroup.close();
     _visibleGraphicsStreamGroup.close();
     _graphicHoveredStreamGroup.close();
+    _hoveredGraphicStreamGroup.close();
 
     // Close direct controllers
     _graphicHoveredController.close();

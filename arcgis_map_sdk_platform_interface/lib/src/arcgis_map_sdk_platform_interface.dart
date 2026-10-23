@@ -264,6 +264,14 @@ class ArcgisMapPlatform extends PlatformInterface {
     );
   }
 
+  /// The attributes of the topmost graphic under the pointer, or null where
+  /// the pointer is over no graphic. Emitted on every pointer move.
+  Stream<Attributes?> hoveredGraphicStream(int mapId) {
+    throw UnimplementedError(
+      'hoveredGraphicStream() has not been implemented.',
+    );
+  }
+
   List<String> getVisibleGraphicIds(int mapId) {
     throw UnimplementedError(
       'getVisibleGraphicIds() has not been implemented.',

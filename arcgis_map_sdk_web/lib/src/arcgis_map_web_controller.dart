@@ -397,6 +397,13 @@ class ArcgisMapWebController {
     return _streamManager.isGraphicHoveredStream(view);
   }
 
+  Stream<Attributes?> hoveredGraphicStream() {
+    final view = _activeView;
+    if (view == null) return Stream.value(null);
+
+    return _streamManager.hoveredGraphicStream(view);
+  }
+
   List<String> getVisibleGraphicIds() {
     final view = _activeView;
     if (view == null) return [];

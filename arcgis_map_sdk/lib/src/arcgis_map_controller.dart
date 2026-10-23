@@ -339,6 +339,16 @@ class ArcgisMapController {
     return ArcgisMapPlatform.instance.isGraphicHoveredStream(mapId);
   }
 
+  /// The attributes of the topmost graphic under the pointer, or null where
+  /// the pointer is over no graphic.
+  ///
+  /// Complements [isGraphicHoveredStream], which only answers *whether*
+  /// something is hovered. Emits on every pointer move, so a consumer that
+  /// only cares about changes should apply `distinct`. Web only for now.
+  Stream<Attributes?> hoveredGraphicStream() {
+    return ArcgisMapPlatform.instance.hoveredGraphicStream(mapId);
+  }
+
   List<String> getVisibleGraphicIds() {
     return ArcgisMapPlatform.instance.getVisibleGraphicIds(mapId);
   }

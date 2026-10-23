@@ -7,6 +7,7 @@ library;
 
 import 'dart:js_interop';
 
+import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';
 import 'package:arcgis_map_sdk_web/js_interop/geometry/point.dart';
 
 /// Event handling
@@ -26,4 +27,7 @@ extension type JsHitTestResult._(JSObject _) implements JSObject {
 extension type JsHitTestResultItem._(JSObject _) implements JSObject {
   external JSObject? get graphic;
   external JsPoint get point;
+
+  /// The layer that was hit; a basemap's vector tiles count as hits too.
+  external JsLayer? get layer;
 }
