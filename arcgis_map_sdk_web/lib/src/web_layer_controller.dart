@@ -88,6 +88,8 @@ class WebLayerController {
       'elevationInfo': {
         'mode': options.elevationMode.value,
       },
+      'opacity': options.opacity,
+      if (options.effect != null) 'effect': options.effect,
     }.jsify()! as JSObject;
 
     final graphicsLayer = JsGraphicsLayer(layerProperties);

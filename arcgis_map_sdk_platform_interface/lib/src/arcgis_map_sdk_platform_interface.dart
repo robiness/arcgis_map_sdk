@@ -139,6 +139,14 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('addFeatureLayer() has not been implemented.');
   }
 
+  void setLayerOpacity({
+    required int mapId,
+    required String layerId,
+    required double opacity,
+  }) {
+    throw UnimplementedError('setLayerOpacity() has not been implemented.');
+  }
+
   bool destroyLayer({required int mapId, required String layerId}) {
     throw UnimplementedError('destroyLayer() has not been implemented.');
   }

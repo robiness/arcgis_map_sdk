@@ -195,6 +195,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  void setLayerOpacity({required int mapId, required String layerId, required double opacity}) {
+    final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
+    final layer = view.map.findLayerById(layerId) as JsLayer?;
+    layer?.opacity = opacity;
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     try {
       final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;

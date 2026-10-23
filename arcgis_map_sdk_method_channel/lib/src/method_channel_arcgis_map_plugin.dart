@@ -138,6 +138,15 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  void setLayerOpacity({
+    required int mapId,
+    required String layerId,
+    required double opacity,
+  }) {
+    throw UnimplementedError('setLayerOpacity() has not been implemented.');
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     throw UnimplementedError('destroyFeatureLayer() has not been implemented.');
   }

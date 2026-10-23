@@ -160,6 +160,16 @@ class ArcgisMapController {
     );
   }
 
+  /// Sets the opacity of a whole layer, from 0 to 1, e.g. to fade its
+  /// graphics in or out together. Web only for now.
+  void setLayerOpacity({required String layerId, required double opacity}) {
+    ArcgisMapPlatform.instance.setLayerOpacity(
+      mapId: mapId,
+      layerId: layerId,
+      opacity: opacity,
+    );
+  }
+
   bool destroyLayer({required String layerId}) {
     return ArcgisMapPlatform.instance
         .destroyLayer(layerId: layerId, mapId: mapId);
