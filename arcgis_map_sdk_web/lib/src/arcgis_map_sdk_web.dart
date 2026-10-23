@@ -33,6 +33,10 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   // Store the shared map so we can create the lazy view later
   static final Map<int, JsEsriMap> _sharedMaps = {};
 
+  // Basemap labels moved beneath the graphics, with the basemap they came
+  // from, so a basemap change can give them back.
+  static final Map<int, ({JsBasemap basemap, JSArray<JsLayer> layers})> _movedReferenceLayers = {};
+
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
   static final Set<String> _registeredViewTypes = {};
@@ -256,6 +260,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _clickControllers.remove(mapId);
       _mapClickControllers.remove(mapId);
       _mapOptions.remove(mapId);
+      _movedReferenceLayers.remove(mapId);
 
     } catch (e, stack) {
       developer.log('Error disposing map', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
@@ -434,7 +439,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       }
 
       if (mapOptions.showLabelsBeneathGraphics) {
-        await _moveReferenceLayersBeneathGraphics(sharedMap);
+        await _moveReferenceLayersBeneathGraphics(mapId, sharedMap);
       }
 
     } catch (e, stack) {
@@ -1064,6 +1069,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       view.map.basemap = basemapId.toJS;
 
+      // The new basemap brings its own labels, again above the graphics.
+      if (_mapOptions[mapId]?.showLabelsBeneathGraphics ?? false) {
+        await _moveReferenceLayersBeneathGraphics(mapId, view.map);
+      }
+
     } catch (e, stack) {
       developer.log('Error changing basemap', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
@@ -1274,7 +1284,18 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   /// Moves basemap reference layers (labels) into the map's operational
   /// layers at index 0 so that graphics layers render on top of them.
-  static Future<void> _moveReferenceLayersBeneathGraphics(JsEsriMap map) async {
+  ///
+  /// The labels moved for an earlier basemap go back to it first: they would
+  /// otherwise stay on top of the new basemap's imagery, and since a basemap
+  /// id always yields the same basemap, that one would come back without
+  /// labels.
+  static Future<void> _moveReferenceLayersBeneathGraphics(int mapId, JsEsriMap map) async {
+    final previous = _movedReferenceLayers.remove(mapId);
+    if (previous != null) {
+      map.removeMany(previous.layers);
+      previous.basemap.referenceLayers.addMany(previous.layers);
+    }
+
     final basemap = map.basemap as JsBasemap;
 
     if (!basemap.loaded) {
@@ -1289,6 +1310,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
     map.addMany(items, 0);
     refLayers.removeAll();
+    _movedReferenceLayers[mapId] = (basemap: basemap, layers: items);
   }
 }
 
