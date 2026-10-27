@@ -107,6 +107,13 @@ class ArcgisMapWebController {
     return _streamManager.getZoom(view);
   }
 
+  Stream<double> getScale() {
+    final view = _activeView;
+    if (view == null) throw Exception('Map view not initialized');
+
+    return _streamManager.getScale(view);
+  }
+
   Stream<LatLng> centerPosition() {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');

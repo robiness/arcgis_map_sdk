@@ -13,6 +13,7 @@ class WebStreamManager {
 
   // StreamGroup management like the old implementation
   final StreamGroup<double> _zoomStreamGroup = StreamGroup.broadcast();
+  final StreamGroup<double> _scaleStreamGroup = StreamGroup.broadcast();
   final StreamGroup<LatLng> _centerPositionStreamGroup =
       StreamGroup.broadcast();
   final StreamGroup<BoundingBox> _boundsStreamGroup = StreamGroup.broadcast();
@@ -65,6 +66,39 @@ class WebStreamManager {
     _eventHandles.add(handle);
 
     _zoomStreamGroup.add(controller.stream);
+  }
+
+  // Scale Stream Management
+  Stream<double> getScale(JsView view) {
+    final streamKey = 'scale_${view.hashCode}';
+
+    if (!_initializedStreams.contains(streamKey)) {
+      _setupScaleStream(view);
+      _initializedStreams.add(streamKey);
+    }
+
+    return _scaleStreamGroup.stream;
+  }
+
+  void _setupScaleStream(JsView view) {
+    // The current scale goes out once the group listens: added any earlier,
+    // a broadcast controller drops it, and reactiveUtils.watch only reports
+    // changes. A view taken over on a switch between 2D and 3D reports its
+    // scale at once too.
+    late final StreamController<double> controller;
+    controller = StreamController<double>.broadcast(
+      onListen: () => controller.add(view.scale),
+    );
+
+    final getter = (() => view.scale.toJS).toJS;
+    final callback = (JSAny? newValue, JSAny? oldValue) {
+      controller.add(view.scale);
+    }.toJS as JSFunction;
+
+    final handle = reactiveUtils.watch(getter, callback);
+    _eventHandles.add(handle);
+
+    _scaleStreamGroup.add(controller.stream);
   }
 
   // Center Position Stream Management
@@ -364,6 +398,7 @@ class WebStreamManager {
     // installs new ones, leaving zoom/center/bounds streams silent for the
     // rest of the session.
     final hadZoom = _initializedStreams.any((k) => k.startsWith('zoom_'));
+    final hadScale = _initializedStreams.any((k) => k.startsWith('scale_'));
     final hadCenter = _initializedStreams.any((k) => k.startsWith('center_'));
     final hadBounds = _initializedStreams.any((k) => k.startsWith('bounds_'));
     final hadAttribution =
@@ -384,6 +419,7 @@ class WebStreamManager {
     // Re-attach previously active streams to the new view (going through the
     // public getters keeps the dedup tracking consistent).
     if (hadZoom) getZoom(newView);
+    if (hadScale) getScale(newView);
     if (hadCenter) centerPosition(newView);
     if (hadBounds) getBounds(newView);
     if (hadAttribution) attributionText(newView);
@@ -422,6 +458,7 @@ class WebStreamManager {
   void dispose() {
     // Close all stream groups
     _zoomStreamGroup.close();
+    _scaleStreamGroup.close();
     _centerPositionStreamGroup.close();
     _boundsStreamGroup.close();
     _attributionTextStreamGroup.close();

@@ -60,6 +60,12 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('getZoom() has not been implemented');
   }
 
+  /// The view's map scale, the denominator of 1:scale at its centre, on
+  /// every change.
+  Stream<double> getScale(int mapId) {
+    throw UnimplementedError('getScale() has not been implemented');
+  }
+
   void switchMapStyle(int mapId, MapStyle mapStyle) {
     throw UnimplementedError('switchMapStyle() has not been implemented.');
   }

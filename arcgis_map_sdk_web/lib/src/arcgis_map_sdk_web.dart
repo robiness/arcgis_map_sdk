@@ -339,6 +339,16 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Stream<double> getScale(int mapId) {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    return controller.getScale();
+  }
+
+  @override
   Future<void> init(int mapId) async {
     try {
 

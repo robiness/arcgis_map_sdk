@@ -98,6 +98,16 @@ class ArcgisMapController {
     return ArcgisMapPlatform.instance.getZoom(mapId);
   }
 
+  /// The map scale at the view's centre, the denominator of 1:scale, on every
+  /// change.
+  ///
+  /// Unlike [getZoom], whose levels follow the tiling scheme of the basemap
+  /// (a vector basemap counts one level lower than a raster one at the same
+  /// scale), the scale means the same on every basemap. Web only for now.
+  Stream<double> getScale() {
+    return ArcgisMapPlatform.instance.getScale(mapId);
+  }
+
   void switchMapStyle(MapStyle mapStyle) {
     ArcgisMapPlatform.instance.switchMapStyle(mapId, mapStyle);
   }

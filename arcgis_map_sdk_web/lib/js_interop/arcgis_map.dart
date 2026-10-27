@@ -21,6 +21,7 @@ extension type JsView._(JSObject _) implements JSObject {
   external String get type;
   external bool get ready;
   external double get zoom;
+  external double get scale;
   external set padding(JSObject padding);
   external JSObject get padding;
   external JsHandle on(JSAny event, JSFunction callback);
