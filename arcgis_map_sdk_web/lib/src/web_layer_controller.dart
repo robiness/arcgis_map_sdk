@@ -267,6 +267,7 @@ class WebLayerController {
   Future<void> moveCamera({
     required LatLng point,
     double? zoomLevel,
+    double? scale,
     int? threeDHeading,
     int? threeDTilt,
     AnimationOptions? animationOptions,
@@ -275,7 +276,7 @@ class WebLayerController {
   }) async {
     final target = <String, dynamic>{
       'center': [point.longitude, point.latitude],
-      if (zoomLevel != null) 'zoom': zoomLevel,
+      if (scale != null) 'scale': scale else if (zoomLevel != null) 'zoom': zoomLevel,
     };
 
     // For 3D views, set camera properties

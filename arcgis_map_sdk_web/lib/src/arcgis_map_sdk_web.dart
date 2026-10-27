@@ -579,6 +579,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       {required LatLng point,
       required int mapId,
       double? zoomLevel,
+      double? scale,
       int? threeDHeading,
       int? threeDTilt,
       AnimationOptions? animationOptions}) async {
@@ -587,7 +588,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
       final target = <String, dynamic>{
         'center': [point.longitude, point.latitude],
-        if (zoomLevel != null) 'zoom': zoomLevel,
+        if (scale != null) 'scale': scale else if (zoomLevel != null) 'zoom': zoomLevel,
       };
 
       // For 3D views, set camera properties

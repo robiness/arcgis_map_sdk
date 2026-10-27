@@ -199,6 +199,7 @@ class ArcgisMapWebController {
   Future<void> moveCamera({
     required LatLng point,
     double? zoomLevel,
+    double? scale,
     int? threeDHeading,
     int? threeDTilt,
     AnimationOptions? animationOptions,
@@ -209,6 +210,7 @@ class ArcgisMapWebController {
     return _layerController.moveCamera(
       point: point,
       zoomLevel: zoomLevel,
+      scale: scale,
       threeDHeading: threeDHeading,
       threeDTilt: threeDTilt,
       animationOptions: animationOptions,

@@ -183,10 +183,14 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
     required LatLng point,
     required int mapId,
     double? zoomLevel,
+    double? scale,
     AnimationOptions? animationOptions,
     int? threeDHeading,
     int? threeDTilt,
   }) {
+    if (scale != null) {
+      throw UnimplementedError('moveCamera(scale:) has not been implemented on mobile.');
+    }
     return _methodChannelBuilder(mapId).invokeMethod<bool>(
       "move_camera",
       {

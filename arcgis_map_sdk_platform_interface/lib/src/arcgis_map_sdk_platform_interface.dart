@@ -179,10 +179,13 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('buildView() has not been implemented.');
   }
 
+  /// Moves the camera to [point], at [scale] (the denominator of 1:scale)
+  /// where given, else at [zoomLevel].
   Future<void> moveCamera({
     required LatLng point,
     required int mapId,
     double? zoomLevel,
+    double? scale,
     int? threeDHeading,
     int? threeDTilt,
     AnimationOptions? animationOptions,

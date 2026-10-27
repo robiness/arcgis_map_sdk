@@ -196,9 +196,16 @@ class ArcgisMapController {
     );
   }
 
+  /// Moves the camera to [point], at [scale] (the denominator of 1:scale)
+  /// where given, else at [zoomLevel].
+  ///
+  /// A zoom level follows the tiling scheme of the basemap, so the same level
+  /// shows another scale on a vector basemap than on a raster one; a scale
+  /// shows the same on every basemap. [scale] is web only for now.
   Future<void> moveCamera({
     required LatLng point,
     double? zoomLevel,
+    double? scale,
     int? threeDHeading,
     int? threeDTilt,
     AnimationOptions? animationOptions,
@@ -207,6 +214,7 @@ class ArcgisMapController {
       mapId: mapId,
       point: point,
       zoomLevel: zoomLevel,
+      scale: scale,
       threeDHeading: threeDHeading,
       threeDTilt: threeDTilt,
       animationOptions: animationOptions,
