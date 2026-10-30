@@ -33,8 +33,8 @@ class RequestHeaderRules {
   /// Sets [headers] for [urlPrefix], replacing the rule any map set for it.
   ///
   /// Throws an [ArgumentError] unless [urlPrefix] is an absolute http or
-  /// https URL with a host: an empty prefix would send the headers with
-  /// every request ArcGIS makes.
+  /// https URL with a host and a path that starts with `/`: an empty prefix
+  /// would send the headers with every request ArcGIS makes.
   void set({
     required String urlPrefix,
     required int mapId,
@@ -48,6 +48,15 @@ class RequestHeaderRules {
         urlPrefix,
         'urlPrefix',
         'must be an absolute http or https URL',
+      );
+    }
+    // Without the path, string-prefix matching would also reach a longer
+    // host name, such as https://api.test.other.com/.
+    if (!uri.path.startsWith('/')) {
+      throw ArgumentError.value(
+        urlPrefix,
+        'urlPrefix',
+        'must have a path that starts with /',
       );
     }
     _rules[urlPrefix] =

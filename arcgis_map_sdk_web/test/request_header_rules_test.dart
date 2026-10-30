@@ -85,14 +85,21 @@ void main() {
     expect(_prefixesAndMaps(disposedBefore), [(_boundaries, 2)]);
   });
 
-  test('a prefix must be an absolute http or https URL', () {
+  test('a prefix must be an absolute http or https URL with a path', () {
     final rules = RequestHeaderRules();
+    const accepted = [
+      'http://localhost:8765/boundaries/',
+      'https://api.test/',
+      'https://api.test/graphql/boundaries/',
+    ];
 
     for (final prefix in [
       '',
       'graphql/boundaries/',
       '//api.test/',
       'ftp://api.test/',
+      'https://api.test',
+      'https://api.test:8443',
     ]) {
       expect(
         () => rules.set(urlPrefix: prefix, mapId: 1, headers: _noHeaders),
@@ -100,12 +107,17 @@ void main() {
         reason: prefix,
       );
     }
-    rules.set(
-      urlPrefix: 'http://localhost:8765/boundaries/',
-      mapId: 1,
-      headers: _noHeaders,
-    );
+    for (final prefix in accepted) {
+      expect(
+        () => rules.set(urlPrefix: prefix, mapId: 1, headers: _noHeaders),
+        returnsNormally,
+        reason: prefix,
+      );
+    }
 
-    expect(_prefixesAndMaps(rules), [('http://localhost:8765/boundaries/', 1)]);
+    expect(
+      [for (final rule in rules.rules) rule.urlPrefix],
+      unorderedEquals(accepted),
+    );
   });
 }

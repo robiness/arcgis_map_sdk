@@ -33,6 +33,12 @@ external JSObject get esri;
 @JS('esriConfig')
 external JSObject get esriConfig;
 
+/// A JavaScript `Error`.
+@JS('Error')
+extension type JsError._(JSObject _) implements JSObject {
+  external factory JsError(String message);
+}
+
 @JS('Object.defineProperty')
 external void defineProperty(JSObject obj, String name, JSObject descriptor);
 

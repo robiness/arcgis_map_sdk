@@ -50,32 +50,42 @@ class EsriRequestInterceptors {
   }
 
   static JSFunction _before(RequestHeaderRule rule) {
-    return ((JsInterceptorParams params) => _addHeaders(rule, params).toJS)
-        .toJS;
+    return ((JsInterceptorParams params) => _withHeaders(rule, params)).toJS;
   }
 
   /// Fails the request when [RequestHeaderRule.headers] fails, rather than
-  /// sending it without them.
-  static Future<JSAny?> _addHeaders(
+  /// sending it without them. The rejection is a JS `Error` with the Dart
+  /// error as its message, so the failed request reports the cause.
+  static JSPromise<JSAny?> _withHeaders(
+    RequestHeaderRule rule,
+    JsInterceptorParams params,
+  ) {
+    return JSPromise<JSAny?>(
+      (JSFunction resolve, JSFunction reject) {
+        _addHeaders(rule, params).then(
+          (_) => resolve.callAsFunction(),
+          onError: (Object e, StackTrace stack) {
+            developer.log(
+              'Error adding request headers for ${rule.urlPrefix}',
+              name: 'arcgis_map_sdk_web',
+              error: e,
+              stackTrace: stack,
+              level: 1000,
+            );
+            return reject.callAsFunction(null, JsError('$e'));
+          },
+        );
+      }.toJS,
+    );
+  }
+
+  static Future<void> _addHeaders(
     RequestHeaderRule rule,
     JsInterceptorParams params,
   ) async {
-    final Map<String, String> headers;
-    try {
-      headers = await rule.headers();
-    } catch (e, stack) {
-      developer.log(
-        'Error getting request headers for ${rule.urlPrefix}',
-        name: 'arcgis_map_sdk_web',
-        error: e,
-        stackTrace: stack,
-        level: 1000,
-      );
-      rethrow;
-    }
+    final headers = await rule.headers();
     final options = params.requestOptions;
     final own = options.headers.dartify() as Map<Object?, Object?>?;
     options.headers = {...?own, ...headers}.jsify()! as JSObject;
-    return null;
   }
 }

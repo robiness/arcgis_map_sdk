@@ -36,11 +36,6 @@ Future<JSAny?> _runBefore(JSObject interceptor, JSObject params) =>
 JSAny? _headersOf(JSObject params) =>
     (params['requestOptions']! as JSObject)['headers'];
 
-/// A Dart error that rejects a promise reaches JS boxed in the `error`
-/// property of a JS `Error`.
-Object? _dartErrorIn(Object? rejection) =>
-    ((rejection! as JSObject)['error']! as JSBoxedDartObject).toDart;
-
 void main() {
   test('the request waits for the headers and carries them beside its own',
       () async {
@@ -160,10 +155,19 @@ void main() {
       await expectLater(
         _runBefore(_interceptorsOf(requestConfig).first, params),
         throwsA(
-          predicate(
-            (Object? rejection) => _dartErrorIn(rejection) is StateError,
-            "the callback's error",
-          ),
+          isA<Object>()
+              .having(
+                (rejection) =>
+                    (rejection as JSObject).instanceOfString('Error'),
+                'is a JS Error',
+                isTrue,
+              )
+              .having(
+                (rejection) =>
+                    ((rejection as JSObject)['message']! as JSString).toDart,
+                'message',
+                contains('signed out'),
+              ),
         ),
       );
 
