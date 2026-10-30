@@ -38,7 +38,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   // Basemap labels moved beneath the graphics, with the basemap they came
   // from, so a basemap change can give them back.
-  static final Map<int, MovedReferenceLayers> _movedReferenceLayers = {};
+  static final Map<int, MovedReferenceLayersHolder> _movedReferenceLayers = {};
 
   // The style layer visibility an app set on each map's basemaps.
   static final Map<int, BasemapStyleLayers> _basemapStyleLayers = {};
@@ -1404,18 +1404,15 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   static Future<List<JsLayer>> _currentBasemapLayers(int mapId, JsEsriMap map) {
     return basemapLayers(
       map.basemap as JsBasemap,
-      movedReferenceLayers: _movedReferenceLayers[mapId]?.layers,
+      movedReferenceLayers: _movedReferenceLayers[mapId]?.current?.layers,
     );
   }
 
-  static Future<void> _moveReferenceLayersBeneathGraphics(int mapId, JsEsriMap map) async {
-    final moved = await moveReferenceLayersBeneathGraphics(
+  static Future<void> _moveReferenceLayersBeneathGraphics(int mapId, JsEsriMap map) {
+    return moveReferenceLayersBeneathGraphics(
       map,
-      previous: _movedReferenceLayers.remove(mapId),
+      _movedReferenceLayers.putIfAbsent(mapId, MovedReferenceLayersHolder.new),
     );
-    if (moved != null) {
-      _movedReferenceLayers[mapId] = moved;
-    }
   }
 }
 

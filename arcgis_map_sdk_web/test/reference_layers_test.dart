@@ -10,6 +10,15 @@ import 'fakes/fake_arcgis.dart';
 
 FakeLayer _labels(String id) => FakeLayer(id: id, type: 'vector-tile');
 
+/// A holder of [labels], moved into a map from [basemap].
+MovedReferenceLayersHolder _moved(FakeBasemap basemap, List<FakeLayer> labels) {
+  return MovedReferenceLayersHolder()
+    ..current = (
+      basemap: basemap.js,
+      layers: [for (final layer in labels) layer.js].toJS,
+    );
+}
+
 void main() {
   test(
       "a new basemap's labels go directly beneath the lowest graphics layer, above a layer at index 0",
@@ -27,11 +36,9 @@ void main() {
       ],
       basemap: hybrid,
     );
+    final moved = _moved(lightGray, [lightGrayLabels]);
 
-    final moved = await moveReferenceLayersBeneathGraphics(
-      map.js,
-      previous: (basemap: lightGray.js, layers: [lightGrayLabels.js].toJS),
-    );
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
 
     expect(
       map.layerIds,
@@ -39,8 +46,11 @@ void main() {
     );
     expect(lightGray.referenceLayerIds, ['light-gray labels']);
     expect(hybrid.referenceLayerIds, isEmpty);
-    expect(moved!.layers.toDart.map((layer) => layer.id), ['hybrid labels']);
-    expect(moved.basemap.strictEquals(hybrid.js).toDart, isTrue);
+    expect(
+      moved.current!.layers.toDart.map((layer) => layer.id),
+      ['hybrid labels'],
+    );
+    expect(moved.current!.basemap.strictEquals(hybrid.js).toDart, isTrue);
   });
 
   test(
@@ -52,18 +62,52 @@ void main() {
       layers: [_labels('counties'), FakeLayer(id: 'markers')],
       basemap: lightGray,
     );
+    final moved = MovedReferenceLayersHolder();
 
-    var moved = await moveReferenceLayersBeneathGraphics(map.js);
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
     expect(map.layerIds, ['counties', 'light-gray', 'markers']);
 
     map.basemap = hybrid.js;
-    moved = await moveReferenceLayersBeneathGraphics(map.js, previous: moved);
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
     expect(map.layerIds, ['counties', 'hybrid', 'markers']);
 
     map.basemap = lightGray.js;
-    await moveReferenceLayersBeneathGraphics(map.js, previous: moved);
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
     expect(map.layerIds, ['counties', 'light-gray', 'markers']);
     expect(hybrid.referenceLayerIds, ['hybrid']);
+  });
+
+  test(
+      "two basemap changes in one task leave only the last basemap's labels in the map",
+      () async {
+    final lightGray = FakeBasemap(
+      referenceLayers: [_labels('light-gray labels')],
+      loaded: true,
+    );
+    final hybrid = FakeBasemap(
+      referenceLayers: [_labels('hybrid detail')],
+      loaded: true,
+    );
+    final map = FakeMap(
+      layers: [_labels('counties'), FakeLayer(id: 'pins')],
+      basemap: lightGray,
+    );
+    final moved = MovedReferenceLayersHolder();
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
+
+    map.basemap = hybrid.js;
+    final toHybrid = moveReferenceLayersBeneathGraphics(map.js, moved);
+    map.basemap = lightGray.js;
+    final back = moveReferenceLayersBeneathGraphics(map.js, moved);
+    await Future.wait([toHybrid, back]);
+
+    expect(map.layerIds, ['counties', 'light-gray labels', 'pins']);
+    expect(hybrid.referenceLayerIds, ['hybrid detail']);
+    expect(moved.current!.basemap.strictEquals(lightGray.js).toDart, isTrue);
+    expect(
+      moved.current!.layers.toDart.map((layer) => layer.id),
+      ['light-gray labels'],
+    );
   });
 
   test('labels moved where the graphics layers are not yet go on top',
@@ -71,7 +115,10 @@ void main() {
     final emptyMapBasemap = FakeBasemap(referenceLayers: [_labels('labels')]);
     final emptyMap = FakeMap(basemap: emptyMapBasemap);
 
-    await moveReferenceLayersBeneathGraphics(emptyMap.js);
+    await moveReferenceLayersBeneathGraphics(
+      emptyMap.js,
+      MovedReferenceLayersHolder(),
+    );
 
     expect(emptyMap.layerIds, ['labels']);
     expect(emptyMapBasemap.loaded, isTrue);
@@ -81,7 +128,10 @@ void main() {
       basemap: FakeBasemap(referenceLayers: [_labels('labels')]),
     );
 
-    await moveReferenceLayersBeneathGraphics(map.js);
+    await moveReferenceLayersBeneathGraphics(
+      map.js,
+      MovedReferenceLayersHolder(),
+    );
 
     expect(map.layerIds, ['counties', 'labels']);
   });
@@ -90,7 +140,6 @@ void main() {
       'labels below a layer that is not a graphics layer still end directly beneath the graphics',
       () async {
     final oldLabels = _labels('old labels');
-    final oldBasemap = FakeBasemap(loaded: true);
     final map = FakeMap(
       layers: [oldLabels, _labels('counties'), FakeLayer(id: 'markers')],
       basemap: FakeBasemap(referenceLayers: [_labels('new labels')]),
@@ -98,7 +147,7 @@ void main() {
 
     await moveReferenceLayersBeneathGraphics(
       map.js,
-      previous: (basemap: oldBasemap.js, layers: [oldLabels.js].toJS),
+      _moved(FakeBasemap(loaded: true), [oldLabels]),
     );
 
     expect(map.layerIds, ['counties', 'new labels', 'markers']);
@@ -111,18 +160,20 @@ void main() {
     final lightGray =
         FakeBasemap(referenceLayers: [lightGrayLabels], loaded: true);
     final map = FakeMap(layers: [FakeLayer(id: 'markers')], basemap: hybrid);
+    final moved = MovedReferenceLayersHolder();
     final loading = hybrid.holdLoad();
 
-    final replaced = moveReferenceLayersBeneathGraphics(map.js);
+    final replaced = moveReferenceLayersBeneathGraphics(map.js, moved);
     map.basemap = lightGray.js;
-    final current = await moveReferenceLayersBeneathGraphics(map.js);
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
     loading.complete();
+    await replaced;
 
-    expect(await replaced, isNull);
     expect(map.layerIds, ['light-gray labels', 'markers']);
     expect(hybrid.referenceLayerIds, ['hybrid labels']);
+    expect(moved.current!.basemap.strictEquals(lightGray.js).toDart, isTrue);
     expect(
-      current!.layers.toDart.map((layer) => layer.id),
+      moved.current!.layers.toDart.map((layer) => layer.id),
       ['light-gray labels'],
     );
   });
@@ -134,13 +185,11 @@ void main() {
       layers: [oldLabels, FakeLayer(id: 'markers')],
       basemap: FakeBasemap(),
     );
+    final moved = _moved(oldBasemap, [oldLabels]);
 
-    final moved = await moveReferenceLayersBeneathGraphics(
-      map.js,
-      previous: (basemap: oldBasemap.js, layers: [oldLabels.js].toJS),
-    );
+    await moveReferenceLayersBeneathGraphics(map.js, moved);
 
-    expect(moved, isNull);
+    expect(moved.current, isNull);
     expect(map.layerIds, ['markers']);
     expect(oldBasemap.referenceLayerIds, ['old labels']);
   });
