@@ -35,3 +35,4 @@ jobs:
           channel: 'stable'
       - run: ./am deps
       - run: ./am test
+      - run: cd arcgis_map_sdk_web && flutter test --platform chrome

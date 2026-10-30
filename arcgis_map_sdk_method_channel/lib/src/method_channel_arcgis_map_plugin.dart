@@ -147,6 +147,20 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  void setRequestHeaders({
+    required int mapId,
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    throw UnimplementedError('setRequestHeaders() has not been implemented.');
+  }
+
+  @override
+  void clearRequestHeaders({required int mapId, required String urlPrefix}) {
+    throw UnimplementedError('clearRequestHeaders() has not been implemented.');
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     throw UnimplementedError('destroyFeatureLayer() has not been implemented.');
   }

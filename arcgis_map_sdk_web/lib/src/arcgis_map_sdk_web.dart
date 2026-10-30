@@ -8,6 +8,7 @@ import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interf
 import 'package:arcgis_map_sdk_web/assets.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
+import 'package:arcgis_map_sdk_web/src/esri_request_interceptors.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
 import 'package:flutter/services.dart';
@@ -36,6 +37,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   // Basemap labels moved beneath the graphics, with the basemap they came
   // from, so a basemap change can give them back.
   static final Map<int, ({JsBasemap basemap, JSArray<JsLayer> layers})> _movedReferenceLayers = {};
+
+  // esriConfig.request belongs to the page, so its maps share one registry.
+  static EsriRequestInterceptors? _requestInterceptors;
 
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
@@ -206,6 +210,21 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  void setRequestHeaders({
+    required int mapId,
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    (_requestInterceptors ??= EsriRequestInterceptors(esriConfig['request']! as JSObject))
+        .set(urlPrefix: urlPrefix, mapId: mapId, headers: headers);
+  }
+
+  @override
+  void clearRequestHeaders({required int mapId, required String urlPrefix}) {
+    _requestInterceptors?.clear(urlPrefix);
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     try {
       final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
@@ -261,6 +280,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _mapClickControllers.remove(mapId);
       _mapOptions.remove(mapId);
       _movedReferenceLayers.remove(mapId);
+      _requestInterceptors?.clearMap(mapId);
 
     } catch (e, stack) {
       developer.log('Error disposing map', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);

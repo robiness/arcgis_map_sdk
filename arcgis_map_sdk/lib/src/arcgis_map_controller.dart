@@ -180,6 +180,32 @@ class ArcgisMapController {
     );
   }
 
+  /// Every ArcGIS request whose URL starts with [urlPrefix] gets the headers
+  /// [headers] returns at request time. A second call for the same prefix
+  /// replaces the first. Headers apply page-wide, to the requests of every
+  /// map. [urlPrefix] must be an absolute http or https URL. [headers] runs
+  /// once per request, so it should answer from a cache. A failing [headers]
+  /// fails that request. Web only for now.
+  void setRequestHeaders({
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    ArcgisMapPlatform.instance.setRequestHeaders(
+      mapId: mapId,
+      urlPrefix: urlPrefix,
+      headers: headers,
+    );
+  }
+
+  /// Removes the headers set for [urlPrefix], whichever map set them. Web
+  /// only for now.
+  void clearRequestHeaders({required String urlPrefix}) {
+    ArcgisMapPlatform.instance.clearRequestHeaders(
+      mapId: mapId,
+      urlPrefix: urlPrefix,
+    );
+  }
+
   bool destroyLayer({required String layerId}) {
     return ArcgisMapPlatform.instance
         .destroyLayer(layerId: layerId, mapId: mapId);

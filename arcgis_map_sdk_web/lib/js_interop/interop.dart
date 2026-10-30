@@ -9,6 +9,8 @@ library;
 // Views
 export 'arcgis_map.dart';
 export 'arcgis_scene.dart';
+// Configuration (esri.config)
+export 'config/request_interceptor.dart';
 export 'core/attributes.dart';
 // Core definitions (esri.core.*)
 export 'core/collection.dart';

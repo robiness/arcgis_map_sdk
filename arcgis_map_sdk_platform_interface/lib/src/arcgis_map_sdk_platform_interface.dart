@@ -153,6 +153,18 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('setLayerOpacity() has not been implemented.');
   }
 
+  void setRequestHeaders({
+    required int mapId,
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    throw UnimplementedError('setRequestHeaders() has not been implemented.');
+  }
+
+  void clearRequestHeaders({required int mapId, required String urlPrefix}) {
+    throw UnimplementedError('clearRequestHeaders() has not been implemented.');
+  }
+
   bool destroyLayer({required int mapId, required String layerId}) {
     throw UnimplementedError('destroyLayer() has not been implemented.');
   }
