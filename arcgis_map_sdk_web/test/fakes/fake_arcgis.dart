@@ -59,7 +59,7 @@ class FakeVectorTileLayer extends FakeLayer {
 
   final Map<String, String> visibility = {};
   Completer<void>? _held;
-  JSObject? _loadError;
+  ({JSAny? reason})? _rejection;
   bool _loaded = false;
 
   @override
@@ -68,7 +68,7 @@ class FakeVectorTileLayer extends FakeLayer {
   }
 
   /// Makes every following `load()` wait until the returned completer
-  /// completes, or until [completeLoad] or [failLoad].
+  /// completes, or until [completeLoad], [failLoad] or [rejectLoad].
   Completer<void> holdLoad() => _held = Completer<void>();
 
   void completeLoad() => _held!.complete();
@@ -76,7 +76,12 @@ class FakeVectorTileLayer extends FakeLayer {
   /// Rejects the held loads, and every later one, as ArcGIS does: with an
   /// error object that has [name] and [message].
   void failLoad(String name, String message) {
-    _loadError = {'name': name, 'message': message}.jsify()! as JSObject;
+    rejectLoad({'name': name, 'message': message}.jsify());
+  }
+
+  /// Rejects the held loads, and every later one, with [reason].
+  void rejectLoad(JSAny? reason) {
+    _rejection = (reason: reason);
     _held!.complete();
   }
 
@@ -85,12 +90,12 @@ class FakeVectorTileLayer extends FakeLayer {
     loadCount++;
     return JSPromise<JSObject>(
       (JSFunction resolve, JSFunction reject) {
-        _settle().then((error) {
-          if (error == null) {
+        _settle().then((rejection) {
+          if (rejection == null) {
             _loaded = true;
             resolve.callAsFunction(null, js);
           } else {
-            reject.callAsFunction(null, error);
+            reject.callAsFunction(null, rejection.reason);
           }
         });
       }.toJS,
@@ -98,12 +103,12 @@ class FakeVectorTileLayer extends FakeLayer {
   }
 
   /// What the load rejects with, or null when it resolves.
-  Future<JSObject?> _settle() async {
+  Future<({JSAny? reason})?> _settle() async {
     if (failsToLoad) {
-      return JsError('$id failed to load');
+      return (reason: JsError('$id failed to load'));
     }
     await _held?.future;
-    return _loadError;
+    return _rejection;
   }
 
   JSObject? getStyleLayer(String layerId) {

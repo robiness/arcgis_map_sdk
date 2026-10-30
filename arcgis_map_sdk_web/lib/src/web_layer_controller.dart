@@ -163,20 +163,38 @@ class WebLayerController {
     final layer = JsVectorTileLayer({'id': layerId, 'style': style}.jsify()! as JSObject);
     map.add(layer, index);
     _layers[layerId] = layer;
-    final load = layer.load().toDart;
-    _vectorTileLoads[layerId] = load.then((_) {}, onError: (Object _) {});
 
-    try {
-      await load;
-    } catch (e) {
-      map.remove(layer);
-      layer.destroy();
-      _layers.remove(layerId);
-      _vectorTileLoads.remove(layerId);
-      // ArcGIS rejects with an esri/core/Error.
-      final error = e as JSObject;
-      throw Exception('Vector tile layer $layerId failed to load: ${error['name']}: ${error['message']}');
+    // One future for the load and its cleanup, so whoever waits on the
+    // layer's _vectorTileLoads entry finds a failed layer already gone.
+    final loading = () async {
+      try {
+        await layer.load().toDart;
+      } catch (e) {
+        map.remove(layer);
+        layer.destroy();
+        // The id may already belong to a layer added after this one left
+        // the map.
+        if (identical(_layers[layerId], layer)) {
+          _layers.remove(layerId);
+          _vectorTileLoads.remove(layerId);
+        }
+        throw Exception('Vector tile layer $layerId failed to load: ${_describeLoadError(e)}');
+      }
+    }();
+    _vectorTileLoads[layerId] = loading.then((_) {}, onError: (Object _) {});
+    await loading;
+  }
+
+  /// `<name>: <message>` of the esri/core/Error ArcGIS rejects a load with.
+  /// A rejection with a JS primitive reaches Dart as a Dart value, one with
+  /// null or undefined as a [NullRejectionException]; those are shown as
+  /// they are.
+  static String _describeLoadError(Object error) {
+    if (error is NullRejectionException || error is String || error is num || error is bool) {
+      return '$error';
     }
+    final arcgisError = error as JSObject;
+    return '${arcgisError['name']}: ${arcgisError['message']}';
   }
 
   // Graphics Management

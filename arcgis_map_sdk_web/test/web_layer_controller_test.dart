@@ -1,6 +1,10 @@
 @TestOn('browser')
 library;
 
+import 'dart:js_interop';
+import 'dart:ui';
+
+import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 import 'package:arcgis_map_sdk_web/src/web_layer_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -104,6 +108,105 @@ void main() {
 
     expect(constructed, hasLength(2));
     expect(map.layerIds, ['counties', 'labels', 'markers']);
+  });
+
+  test('a pending load that fails settles only once the layer has left the map',
+      () async {
+    final constructed = installFakeVectorTileLayers();
+    final map = _mapWithLabelsAndMarkers();
+
+    List<String>? layerIdsWhenSettled;
+    bool? destroyedWhenSettled;
+    final adding = WebLayerController(mapId: 1)
+        .addVectorTileLayer(
+      layerId: 'counties',
+      style: _style,
+      view: FakeView(map).js,
+    )
+        .then<void>(
+      (_) {},
+      onError: (Object _) {
+        layerIdsWhenSettled = map.layerIds;
+        destroyedWhenSettled = constructed.single.destroyed;
+      },
+    );
+    await pumpEventQueue();
+    expect(map.layerIds, ['labels', 'markers', 'counties']);
+
+    constructed.single.failLoad('request:server', 'Unauthorized');
+    await adding;
+
+    expect(layerIdsWhenSettled, ['labels', 'markers']);
+    expect(destroyedWhenSettled, isTrue);
+  });
+
+  test('a layer that fails to load is forgotten, so its id finds no layer',
+      () async {
+    final constructed = installFakeVectorTileLayers();
+    final view = FakeView(_mapWithLabelsAndMarkers()).js;
+    final controller = WebLayerController(mapId: 1);
+
+    final failing = controller.addVectorTileLayer(
+      layerId: 'counties',
+      style: _style,
+      view: view,
+    );
+    constructed.single.failLoad('request:server', 'Unauthorized');
+    await expectLater(failing, throwsException);
+
+    await expectLater(
+      controller.addGraphic(
+        layerId: 'counties',
+        graphic: PointGraphic(
+          latitude: 53.4105,
+          longitude: -6.44,
+          attributes: Attributes({'id': 'clonee'}),
+          symbol: const SimpleMarkerSymbol(
+            color: Color(0xFFFF0000),
+            outlineColor: Color(0xFFFFFFFF),
+          ),
+        ),
+        view: view,
+      ),
+      throwsA(
+        isA<Exception>().having(
+          (e) => e.toString(),
+          'toString()',
+          contains('Layer with id counties not found'),
+        ),
+      ),
+    );
+  });
+
+  test(
+      'a load rejected with something other than an ArcGIS error names the layer',
+      () async {
+    final constructed = installFakeVectorTileLayers();
+    final view = FakeView(_mapWithLabelsAndMarkers()).js;
+    final controller = WebLayerController(mapId: 1);
+    Matcher namesTheLayer(String text) => throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString()',
+            allOf(contains('counties'), contains(text)),
+          ),
+        );
+
+    final rejectedWithNull = controller.addVectorTileLayer(
+      layerId: 'counties',
+      style: _style,
+      view: view,
+    );
+    constructed.last.rejectLoad(null);
+    await expectLater(rejectedWithNull, namesTheLayer('null'));
+
+    final rejectedWithText = controller.addVectorTileLayer(
+      layerId: 'counties',
+      style: _style,
+      view: view,
+    );
+    constructed.last.rejectLoad('Request canceled'.toJS);
+    await expectLater(rejectedWithText, namesTheLayer('Request canceled'));
   });
 
   test('an id already in the map is refused', () async {
