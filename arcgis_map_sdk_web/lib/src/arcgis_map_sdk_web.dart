@@ -139,6 +139,26 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> addVectorTileLayer({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) async {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    try {
+      await controller.addVectorTileLayer(layerId: layerId, style: style, index: index);
+    } catch (e, stack) {
+      developer.log('Error adding vector tile layer $layerId', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      rethrow;
+    }
+  }
+
+  @override
   void addViewPadding(int mapId, ViewPadding padding) {
     final controller = _controllers[mapId];
     if (controller == null) {
@@ -558,6 +578,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       '@arcgis/core/geometry/Point.js',
       '@arcgis/core/config.js',
       '@arcgis/core/core/reactiveUtils.js',
+      '@arcgis/core/layers/VectorTileLayer.js',
     ];
     final result = await arcgisLoader!.importModules(modulePaths.map((p) => p.toJS).toList().toJS).toDart;
     final modules = result.toDart;
@@ -574,6 +595,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     layers['SceneLayer'] = modules[4];
     layers['GraphicsLayer'] = modules[5];
     layers['FeatureLayer'] = modules[6];
+    layers['VectorTileLayer'] = modules[11];
     geometry['Point'] = modules[8];
     esri['views'] = views;
     esri['widgets'] = widgets;

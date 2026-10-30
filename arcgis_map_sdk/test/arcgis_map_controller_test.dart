@@ -36,12 +36,32 @@ void main() {
 
     expect(platform.styleLayerCalls, [(mapId: 7, ids: ids, visible: false)]);
   });
+
+  test('a vector tile layer reaches the platform with the map id', () async {
+    final style = <String, Object?>{'version': 8, 'layers': <Object?>[]};
+
+    await controller.addVectorTileLayer(
+      layerId: 'counties',
+      style: style,
+      index: 0,
+    );
+
+    expect(
+      platform.vectorTileLayerCalls,
+      [(mapId: 7, layerId: 'counties', index: 0)],
+    );
+    expect(identical(platform.vectorTileStyle, style), isTrue);
+  });
 }
 
 class _RecordingPlatform extends ArcgisMapPlatform {
   final calls = <(String method, int mapId, Object? argument)>[];
 
   final styleLayerCalls = <({int mapId, List<String> ids, bool visible})>[];
+
+  final vectorTileLayerCalls = <({int mapId, String layerId, int? index})>[];
+
+  Map<String, Object?>? vectorTileStyle;
 
   Future<Map<String, String>> Function()? requestHeaders;
 
@@ -76,5 +96,16 @@ class _RecordingPlatform extends ArcgisMapPlatform {
     required bool visible,
   }) async {
     styleLayerCalls.add((mapId: mapId, ids: styleLayerIds, visible: visible));
+  }
+
+  @override
+  Future<void> addVectorTileLayer({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) async {
+    vectorTileLayerCalls.add((mapId: mapId, layerId: layerId, index: index));
+    vectorTileStyle = style;
   }
 }

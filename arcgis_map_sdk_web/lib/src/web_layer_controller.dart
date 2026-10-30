@@ -24,6 +24,10 @@ class WebLayerController {
   // SceneLayers deferred while in 2D mode (MapView can't handle them at all)
   final List<JsSceneLayer> _deferredSceneLayers = [];
 
+  /// The load of each vector tile layer by id, completing whether or not the
+  /// layer loads.
+  final Map<String, Future<void>> _vectorTileLoads = {};
+
   Future<void> initialize() async {
     // Initialize the controller
   }
@@ -136,6 +140,43 @@ class WebLayerController {
     return SceneLayer(
       id: layerId,
     );
+  }
+
+  /// Adds a vector tile layer drawn from [style] at [index] among the map's
+  /// operational layers, on top when null, and completes once it has loaded.
+  ///
+  /// The layer joins the map both views share, so it shows in 2D and 3D. A
+  /// layer that fails to load stays in the map unless removed, so it is
+  /// removed and destroyed here, and its id can be added again.
+  Future<void> addVectorTileLayer({
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+    required JSObject view,
+  }) async {
+    final map = (view as JsView).map;
+    // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
+    if (map.findLayerById(layerId) != null) {
+      throw StateError('A layer with id $layerId is already in the map');
+    }
+
+    final layer = JsVectorTileLayer({'id': layerId, 'style': style}.jsify()! as JSObject);
+    map.add(layer, index);
+    _layers[layerId] = layer;
+    final load = layer.load().toDart;
+    _vectorTileLoads[layerId] = load.then((_) {}, onError: (Object _) {});
+
+    try {
+      await load;
+    } catch (e) {
+      map.remove(layer);
+      layer.destroy();
+      _layers.remove(layerId);
+      _vectorTileLoads.remove(layerId);
+      // ArcGIS rejects with an esri/core/Error.
+      final error = e as JSObject;
+      throw Exception('Vector tile layer $layerId failed to load: ${error['name']}: ${error['message']}');
+    }
   }
 
   // Graphics Management
@@ -635,6 +676,7 @@ class WebLayerController {
 
   void dispose() {
     _layers.clear();
+    _vectorTileLoads.clear();
     _graphicsInView.clear();
   }
 }

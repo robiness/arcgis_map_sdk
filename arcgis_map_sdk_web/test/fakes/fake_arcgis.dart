@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 @JSExport()
 class FakeLayer {
@@ -47,12 +48,18 @@ class FakeVectorTileLayer extends FakeLayer {
     required super.id,
     required this.styleLayerIds,
     this.failsToLoad = false,
+    this.properties,
   }) : super(type: 'vector-tile');
 
   final Set<String> styleLayerIds;
   final bool failsToLoad;
+
+  /// What the layer was constructed with, dartified.
+  final Object? properties;
+
   final Map<String, String> visibility = {};
   Completer<void>? _held;
+  JSObject? _loadError;
   bool _loaded = false;
 
   @override
@@ -61,20 +68,42 @@ class FakeVectorTileLayer extends FakeLayer {
   }
 
   /// Makes every following `load()` wait until the returned completer
-  /// completes.
+  /// completes, or until [completeLoad] or [failLoad].
   Completer<void> holdLoad() => _held = Completer<void>();
+
+  void completeLoad() => _held!.complete();
+
+  /// Rejects the held loads, and every later one, as ArcGIS does: with an
+  /// error object that has [name] and [message].
+  void failLoad(String name, String message) {
+    _loadError = {'name': name, 'message': message}.jsify()! as JSObject;
+    _held!.complete();
+  }
 
   @override
   JSPromise<JSObject> load() {
     loadCount++;
-    return Future<JSObject>(() async {
-      if (failsToLoad) {
-        throw StateError('$id failed to load');
-      }
-      await _held?.future;
-      _loaded = true;
-      return js;
-    }).toJS;
+    return JSPromise<JSObject>(
+      (JSFunction resolve, JSFunction reject) {
+        _settle().then((error) {
+          if (error == null) {
+            _loaded = true;
+            resolve.callAsFunction(null, js);
+          } else {
+            reject.callAsFunction(null, error);
+          }
+        });
+      }.toJS,
+    );
+  }
+
+  /// What the load rejects with, or null when it resolves.
+  Future<JSObject?> _settle() async {
+    if (failsToLoad) {
+      return JsError('$id failed to load');
+    }
+    await _held?.future;
+    return _loadError;
   }
 
   JSObject? getStyleLayer(String layerId) {
@@ -217,4 +246,40 @@ class FakeMap {
     }
     return null;
   }
+}
+
+@JSExport()
+class FakeView {
+  FakeView(FakeMap map) : _map = map;
+
+  final FakeMap _map;
+
+  late final JsView js = createJSInteropWrapper(this) as JsView;
+
+  JsEsriMap get map => _map.js;
+}
+
+/// Puts a fake `esri.layers.VectorTileLayer` constructor on the page for the
+/// rest of the test. The layers it constructs join the returned list, each
+/// holding its load until [FakeVectorTileLayer.completeLoad] or
+/// [FakeVectorTileLayer.failLoad].
+List<FakeVectorTileLayer> installFakeVectorTileLayers() {
+  final previous = globalContext['esri'];
+  addTearDown(() => globalContext['esri'] = previous);
+
+  final constructed = <FakeVectorTileLayer>[];
+  final layers = JSObject();
+  layers['VectorTileLayer'] = (JSObject properties) {
+    final layer = FakeVectorTileLayer(
+      id: (properties['id']! as JSString).toDart,
+      styleLayerIds: const {},
+      properties: properties.dartify(),
+    )..holdLoad();
+    constructed.add(layer);
+    return layer.js;
+  }.toJS;
+  final esri = JSObject();
+  esri['layers'] = layers;
+  globalContext['esri'] = esri;
+  return constructed;
 }

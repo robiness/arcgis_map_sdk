@@ -91,6 +91,22 @@ class ArcgisMapWebController {
     );
   }
 
+  Future<void> addVectorTileLayer({
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) {
+    final view = _activeView;
+    if (view == null) throw Exception('Map view not initialized');
+
+    return _layerController.addVectorTileLayer(
+      layerId: layerId,
+      style: style,
+      index: index,
+      view: view,
+    );
+  }
+
   /// Exports an image of the currently visible map view
   Future<Uint8List> exportImage() {
     final view = _activeView;

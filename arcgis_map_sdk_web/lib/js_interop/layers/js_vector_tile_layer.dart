@@ -13,6 +13,8 @@ import 'package:arcgis_map_sdk_web/js_interop/arcgis_map.dart';
 /// Vector tile layer
 @JS("esri.layers.VectorTileLayer")
 extension type JsVectorTileLayer._(JSObject _) implements JsLayer {
+  external factory JsVectorTileLayer(JSObject properties);
+
   /// The style layer named [layerId], or null when the layer has none.
   external JSObject? getStyleLayer(String layerId);
 

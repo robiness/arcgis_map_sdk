@@ -84,6 +84,27 @@ class ArcgisMapController {
     );
   }
 
+  /// Adds a VectorTileLayer built from [style], a Mapbox GL style object.
+  /// [index] is the position in the map's operational layers (0 = bottom).
+  /// Completes once the layer has loaded (its service description and style
+  /// resolved); throws when it cannot load, and then leaves no layer behind.
+  /// Register headers for the service with [setRequestHeaders] first; the
+  /// load already requests its description. The error of a failed load names
+  /// the layer. An id already in the map throws a StateError. Web only for
+  /// now.
+  Future<void> addVectorTileLayer({
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) {
+    return ArcgisMapPlatform.instance.addVectorTileLayer(
+      mapId: mapId,
+      layerId: layerId,
+      style: style,
+      index: index,
+    );
+  }
+
   Future<void> _onCall(MethodCall call) async {
     final method = call.method;
     switch (method) {

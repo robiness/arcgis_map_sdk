@@ -36,6 +36,16 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> addVectorTileLayer({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) {
+    throw UnimplementedError('addVectorTileLayer() has not been implemented.');
+  }
+
+  @override
   Future<Uint8List> exportImage(int mapId) {
     return _methodChannelBuilder(mapId)
         .invokeMethod<Uint8List>("export_image")

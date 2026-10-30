@@ -3,15 +3,18 @@ import 'package:arcgis_example/pointer_interceptor_web.dart';
 import 'package:arcgis_map_sdk/arcgis_map_sdk.dart';
 import 'package:flutter/material.dart';
 
-/// A map at Clonee, County Meath, to check against the real ArcGIS API what
-/// the SDK does to the basemap's own county boundary lines and labels. The
-/// buttons hide and show them, switch between the map and the satellite
-/// basemap and between 2D and 3D, to check that what was set stays set across
-/// the switches.
+/// A map at Clonee, County Meath, to check against the real ArcGIS API a
+/// county layer drawn from a vector tile style, and what the SDK does to the
+/// basemap's own county boundary lines and labels. Once the county layer has
+/// loaded, the basemap's are hidden. The buttons hide and show them, switch
+/// between the map and the satellite basemap and between 2D and 3D, to check
+/// that what was set stays set across the switches.
 ///
-/// A county layer added to this page expects a VectorTileServer-shaped service
-/// with the source layers `borders`, `area_labels` and `border_labels`, such
-/// as the one in `example/spike/server.py` on the `spike/vector-tiles` branch.
+/// The county layer expects a VectorTileServer-shaped service at
+/// `VECTOR_TILE_SERVICE_URL` with the source layers `borders`, `area_labels`
+/// and `border_labels`, such as the one in `example/spike/server.py` on the
+/// `spike/vector-tiles` branch. Its requests carry `VECTOR_TILE_TOKEN` as a
+/// bearer token.
 class VectorTileStyleExamplePage extends StatefulWidget {
   const VectorTileStyleExamplePage({super.key});
 
@@ -35,10 +38,131 @@ class _VectorTileStyleExamplePageState
     'administrative label/county level 6',
   ];
 
+  static const _vectorTileServiceUrl = String.fromEnvironment(
+    'VECTOR_TILE_SERVICE_URL',
+    defaultValue: 'http://localhost:8765/boundaries/county/VectorTileServer',
+  );
+  static const _vectorTileToken = String.fromEnvironment(
+    'VECTOR_TILE_TOKEN',
+    defaultValue: 'spike-token',
+  );
+  static const _clonee = LatLng(53.4105, -6.4400);
+
   ArcgisMapController? _controller;
   var _is3d = false;
   var _isSatellite = false;
   var _areBasemapBoundariesHidden = false;
+
+  /// A dark line with a white halo on the map, a white line with a dark halo
+  /// on satellite.
+  static Map<String, Object?> _countyStyle({required bool satellite}) {
+    final line = satellite ? '#ffffff' : '#333333';
+    final halo = satellite ? '#333333' : '#ffffff';
+    const font = ['Arial Unicode MS Regular'];
+    final labelPaint = {
+      'text-color': line,
+      'text-halo-color': halo,
+      'text-halo-width': 1.5,
+    };
+    return {
+      'version': 8,
+      'sources': {
+        'counties': {'type': 'vector', 'url': _vectorTileServiceUrl},
+      },
+      'glyphs': 'https://basemaps.arcgis.com/arcgis/rest/services/'
+          'OpenStreetMap_v2/VectorTileServer/resources/fonts/'
+          '{fontstack}/{range}.pbf',
+      'layers': [
+        {
+          'id': 'border halo',
+          'type': 'line',
+          'source': 'counties',
+          'source-layer': 'borders',
+          'layout': {'line-join': 'round', 'line-cap': 'round'},
+          'paint': {'line-color': halo, 'line-width': 5},
+        },
+        {
+          'id': 'border',
+          'type': 'line',
+          'source': 'counties',
+          'source-layer': 'borders',
+          'layout': {'line-join': 'round', 'line-cap': 'round'},
+          'paint': {'line-color': line, 'line-width': 2},
+        },
+        {
+          'id': 'area label',
+          'type': 'symbol',
+          'source': 'counties',
+          'source-layer': 'area_labels',
+          'maxzoom': 13,
+          'layout': {
+            'text-field': '{name} · {code}',
+            'text-font': font,
+            'text-size': 14,
+          },
+          'paint': labelPaint,
+        },
+        {
+          'id': 'border label',
+          'type': 'symbol',
+          'source': 'counties',
+          'source-layer': 'border_labels',
+          'minzoom': 13,
+          'layout': {
+            'text-field': '{name}',
+            'text-font': font,
+            'text-size': 12,
+          },
+          'paint': labelPaint,
+        },
+      ],
+    };
+  }
+
+  Future<void> _onMapCreated(ArcgisMapController controller) async {
+    _controller = controller;
+    controller.setRequestHeaders(
+      urlPrefix: '${Uri.parse(_vectorTileServiceUrl).origin}/',
+      headers: () async => {'Authorization': 'Bearer $_vectorTileToken'},
+    );
+    await controller.addGraphicsLayer(
+      layerId: 'pins',
+      options: GraphicsLayerOptions(
+        fields: [
+          Field(name: 'oid', type: 'oid'),
+          Field(name: 'id', type: 'string'),
+        ],
+      ),
+    );
+    await controller.addGraphic(
+      layerId: 'pins',
+      graphic: PointGraphic(
+        latitude: _clonee.latitude,
+        longitude: _clonee.longitude,
+        attributes: Attributes({'id': 'clonee'}),
+        symbol: const SimpleMarkerSymbol(
+          color: Colors.red,
+          outlineColor: Colors.white,
+          radius: 8,
+        ),
+      ),
+    );
+
+    try {
+      await controller.addVectorTileLayer(
+        layerId: 'counties',
+        style: _countyStyle(satellite: false),
+        index: 0,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+      }
+      return;
+    }
+    await _setBasemapBoundariesHidden(true);
+  }
 
   void _toggleMapStyle() {
     setState(() => _is3d = !_is3d);
@@ -52,13 +176,12 @@ class _VectorTileStyleExamplePageState
     );
   }
 
-  Future<void> _toggleBasemapBoundaries() async {
-    setState(
-      () => _areBasemapBoundariesHidden = !_areBasemapBoundariesHidden,
-    );
+  Future<void> _setBasemapBoundariesHidden(bool hidden) async {
+    if (!mounted) return;
+    setState(() => _areBasemapBoundariesHidden = hidden);
     await _controller?.setBasemapStyleLayersVisible(
       styleLayerIds: _basemapBoundaryStyleLayerIds,
-      visible: !_areBasemapBoundariesHidden,
+      visible: !hidden,
     );
   }
 
@@ -74,11 +197,11 @@ class _VectorTileStyleExamplePageState
             basemap: BaseMap.osmLightGray,
             ground: Ground.worldElevation,
             showLabelsBeneathGraphics: true,
-            initialCenter: const LatLng(53.4105, -6.4400),
+            initialCenter: _clonee,
             zoom: 12,
             minZoom: 5,
             mapStyle: MapStyle.twoD,
-            onMapCreated: (controller) => _controller = controller,
+            onMapCreated: _onMapCreated,
           ),
           Padding(
             padding: const EdgeInsets.all(16),
@@ -100,7 +223,9 @@ class _VectorTileStyleExamplePageState
                 ),
                 PointerInterceptorWeb(
                   child: ElevatedButton(
-                    onPressed: _toggleBasemapBoundaries,
+                    onPressed: () => _setBasemapBoundariesHidden(
+                      !_areBasemapBoundariesHidden,
+                    ),
                     child: Text(
                       _areBasemapBoundariesHidden
                           ? 'Show basemap boundaries'

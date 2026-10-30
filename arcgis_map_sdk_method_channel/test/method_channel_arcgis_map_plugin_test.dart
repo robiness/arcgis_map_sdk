@@ -31,5 +31,16 @@ void main() {
         throwsUnimplementedError,
       );
     });
+
+    test('vector tile layers are web only', () {
+      expect(
+        () => MethodChannelArcgisMapPlugin().addVectorTileLayer(
+          mapId: 1,
+          layerId: 'counties',
+          style: const {'version': 8},
+        ),
+        throwsUnimplementedError,
+      );
+    });
   });
 }
