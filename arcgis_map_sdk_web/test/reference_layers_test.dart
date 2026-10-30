@@ -54,6 +54,45 @@ void main() {
   });
 
   test(
+      "a new basemap's labels go beneath the lowest feature layer when there are no graphics layers",
+      () async {
+    final map = FakeMap(
+      layers: [
+        _labels('counties'),
+        FakeLayer(id: 'sites', type: 'feature'),
+        FakeLayer(id: 'regions', type: 'feature'),
+      ],
+      basemap: FakeBasemap(referenceLayers: [_labels('labels')]),
+    );
+
+    await moveReferenceLayersBeneathGraphics(
+      map.js,
+      MovedReferenceLayersHolder(),
+    );
+
+    expect(map.layerIds, ['counties', 'labels', 'sites', 'regions']);
+  });
+
+  test('labels go beneath a feature layer that lies below the graphics',
+      () async {
+    final map = FakeMap(
+      layers: [
+        _labels('counties'),
+        FakeLayer(id: 'sites', type: 'feature'),
+        FakeLayer(id: 'markers'),
+      ],
+      basemap: FakeBasemap(referenceLayers: [_labels('labels')]),
+    );
+
+    await moveReferenceLayersBeneathGraphics(
+      map.js,
+      MovedReferenceLayersHolder(),
+    );
+
+    expect(map.layerIds, ['counties', 'labels', 'sites', 'markers']);
+  });
+
+  test(
       "every basemap's labels sit beneath the graphics after a change away and back",
       () async {
     final lightGray = FakeBasemap(referenceLayers: [_labels('light-gray')]);

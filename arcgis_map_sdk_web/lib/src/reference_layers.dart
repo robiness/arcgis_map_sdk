@@ -13,10 +13,10 @@ class MovedReferenceLayersHolder {
 }
 
 /// Moves the reference layers (labels) of [map]'s basemap into its operational
-/// layers so that graphics render on top of them: directly beneath the lowest
-/// graphics layer, or on top when there is none. Directly beneath it, so they
-/// stay above a layer an app added beneath the graphics, e.g. a vector tile
-/// layer at index 0.
+/// layers so that data layers (graphics or feature) render on top of them:
+/// directly beneath the lowest data layer, or on top when there is none.
+/// Directly beneath it, so they stay above a layer an app added beneath the
+/// data layers, e.g. a vector tile layer at index 0.
 ///
 /// The labels [moved] holds for an earlier basemap go back to it first: they
 /// would otherwise stay on top of the new basemap's imagery, and since a
@@ -57,15 +57,15 @@ Future<void> moveReferenceLayersBeneathGraphics(
     return;
   }
 
-  map.addMany(items, _lowestGraphicsLayerIndex(map));
+  map.addMany(items, _lowestDataLayerIndex(map));
   referenceLayers.removeAll();
   moved.current = (basemap: basemap, layers: items);
 }
 
-int _lowestGraphicsLayerIndex(JsEsriMap map) {
+int _lowestDataLayerIndex(JsEsriMap map) {
   final layers = map.layers;
   for (final layer in layers.toArray().toDart) {
-    if (layer.type == 'graphics') {
+    if (layer.type == 'graphics' || layer.type == 'feature') {
       return layers.indexOf(layer);
     }
   }

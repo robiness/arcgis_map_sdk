@@ -55,7 +55,10 @@ class ArcgisMap extends StatefulWidget {
   final Ground? ground;
   final LatLng initialCenter;
 
-  /// If true, the basemap labels will be moved to the background. Behind any graphics.
+  /// If true, the basemap labels are placed directly beneath the lowest
+  /// graphics or feature layer after every basemap change: above a layer added
+  /// beneath them (e.g. a vector tile layer at index 0), or on top when there
+  /// is none.
   final bool showLabelsBeneathGraphics;
   final bool isInteractive;
   final double zoom;
