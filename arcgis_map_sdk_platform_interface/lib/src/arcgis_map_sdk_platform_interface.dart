@@ -165,6 +165,16 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('clearRequestHeaders() has not been implemented.');
   }
 
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) {
+    throw UnimplementedError(
+      'setBasemapStyleLayersVisible() has not been implemented.',
+    );
+  }
+
   bool destroyLayer({required int mapId, required String layerId}) {
     throw UnimplementedError('destroyLayer() has not been implemented.');
   }

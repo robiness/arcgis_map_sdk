@@ -207,6 +207,23 @@ class ArcgisMapController {
     );
   }
 
+  /// Shows or hides the named style layers in every vector tile layer of the
+  /// current basemap, base and reference, including reference layers the SDK
+  /// moved beneath the graphics. Ids a layer lacks are skipped. The SDK keeps
+  /// the last visibility of every id it was given for the life of the map and
+  /// applies it again after every basemap change. Completes once the layers
+  /// of the current basemap have loaded and been changed. Web only for now.
+  Future<void> setBasemapStyleLayersVisible({
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) {
+    return ArcgisMapPlatform.instance.setBasemapStyleLayersVisible(
+      mapId: mapId,
+      styleLayerIds: styleLayerIds,
+      visible: visible,
+    );
+  }
+
   bool destroyLayer({required String layerId}) {
     return ArcgisMapPlatform.instance
         .destroyLayer(layerId: layerId, mapId: mapId);

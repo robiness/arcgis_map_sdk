@@ -161,6 +161,17 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) {
+    throw UnimplementedError(
+      'setBasemapStyleLayersVisible() has not been implemented.',
+    );
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     throw UnimplementedError('destroyFeatureLayer() has not been implemented.');
   }

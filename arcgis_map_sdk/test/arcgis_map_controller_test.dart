@@ -25,10 +25,23 @@ void main() {
     ]);
     expect(identical(platform.requestHeaders, headers), isTrue);
   });
+
+  test('basemap style layers reach the platform with the map id', () async {
+    const ids = ['administrative boundary/level 6/line'];
+
+    await controller.setBasemapStyleLayersVisible(
+      styleLayerIds: ids,
+      visible: false,
+    );
+
+    expect(platform.styleLayerCalls, [(mapId: 7, ids: ids, visible: false)]);
+  });
 }
 
 class _RecordingPlatform extends ArcgisMapPlatform {
   final calls = <(String method, int mapId, Object? argument)>[];
+
+  final styleLayerCalls = <({int mapId, List<String> ids, bool visible})>[];
 
   Future<Map<String, String>> Function()? requestHeaders;
 
@@ -54,5 +67,14 @@ class _RecordingPlatform extends ArcgisMapPlatform {
   @override
   void clearRequestHeaders({required int mapId, required String urlPrefix}) {
     calls.add(('clearRequestHeaders', mapId, urlPrefix));
+  }
+
+  @override
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) async {
+    styleLayerCalls.add((mapId: mapId, ids: styleLayerIds, visible: visible));
   }
 }

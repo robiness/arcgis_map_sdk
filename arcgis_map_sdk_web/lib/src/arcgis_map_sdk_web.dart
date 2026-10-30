@@ -8,6 +8,7 @@ import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interf
 import 'package:arcgis_map_sdk_web/assets.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
+import 'package:arcgis_map_sdk_web/src/basemap_style_layers.dart';
 import 'package:arcgis_map_sdk_web/src/esri_request_interceptors.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
@@ -38,6 +39,9 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   // Basemap labels moved beneath the graphics, with the basemap they came
   // from, so a basemap change can give them back.
   static final Map<int, MovedReferenceLayers> _movedReferenceLayers = {};
+
+  // The style layer visibility an app set on each map's basemaps.
+  static final Map<int, BasemapStyleLayers> _basemapStyleLayers = {};
 
   // esriConfig.request belongs to the page, so its maps share one registry.
   static EsriRequestInterceptors? _requestInterceptors;
@@ -226,6 +230,30 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) async {
+    try {
+      final map = _sharedMaps[mapId];
+      if (map == null) {
+        throw Exception('Map not found for mapId: $mapId');
+      }
+
+      final styleLayers = _basemapStyleLayers.putIfAbsent(mapId, BasemapStyleLayers.new);
+      await styleLayers.setVisible(
+        styleLayerIds,
+        visible: visible,
+        layers: await _currentBasemapLayers(mapId, map),
+      );
+    } catch (e, stack) {
+      developer.log('Error changing basemap style layers', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      rethrow;
+    }
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     try {
       final view = _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
@@ -281,6 +309,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _mapClickControllers.remove(mapId);
       _mapOptions.remove(mapId);
       _movedReferenceLayers.remove(mapId);
+      _basemapStyleLayers.remove(mapId);
       _requestInterceptors?.clearMap(mapId);
 
     } catch (e, stack) {
@@ -1106,6 +1135,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         await _moveReferenceLayersBeneathGraphics(mapId, view.map);
       }
 
+      // The new basemap, which may be one that comes back, gets the style
+      // layer visibility set while it was not current.
+      final styleLayers = _basemapStyleLayers[mapId];
+      if (styleLayers != null) {
+        await styleLayers.applyTo(await _currentBasemapLayers(mapId, view.map));
+      }
+
     } catch (e, stack) {
       developer.log('Error changing basemap', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
@@ -1312,6 +1348,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         ui.add(widget.viewType.value.toJS, position);
       }
     });
+  }
+
+  static Future<List<JsLayer>> _currentBasemapLayers(int mapId, JsEsriMap map) {
+    return basemapLayers(
+      map.basemap as JsBasemap,
+      movedReferenceLayers: _movedReferenceLayers[mapId]?.layers,
+    );
   }
 
   static Future<void> _moveReferenceLayersBeneathGraphics(int mapId, JsEsriMap map) async {

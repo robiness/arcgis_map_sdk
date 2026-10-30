@@ -5,6 +5,7 @@
 /// JS object every time.
 library;
 
+import 'dart:async';
 import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
@@ -17,13 +18,72 @@ class FakeLayer {
   final String type;
   bool visible = true;
   bool destroyed = false;
+  int loadCount = 0;
 
-  late final JsLayer js = createJSInteropWrapper(this) as JsLayer;
+  late final JsLayer js = _wrap();
 
-  JSPromise<JSObject> load() => Future<JSObject>.value(js).toJS;
+  // What a wrapper exports follows the static type of the wrapped object, so
+  // a subclass wraps itself.
+  JsLayer _wrap() => createJSInteropWrapper(this) as JsLayer;
+
+  JSPromise<JSObject> load() {
+    loadCount++;
+    return Future<JSObject>.value(js).toJS;
+  }
 
   void destroy() {
     destroyed = true;
+  }
+}
+
+/// A vector tile layer that has the style layers [styleLayerIds].
+///
+/// Like a real one it refuses `setStyleLayerVisibility` until it has loaded.
+/// [visibility] records every call, also for an id the layer lacks, which the
+/// real layer ignores, so a test can see a call that should not have been made.
+@JSExport()
+class FakeVectorTileLayer extends FakeLayer {
+  FakeVectorTileLayer({
+    required super.id,
+    required this.styleLayerIds,
+    this.failsToLoad = false,
+  }) : super(type: 'vector-tile');
+
+  final Set<String> styleLayerIds;
+  final bool failsToLoad;
+  final Map<String, String> visibility = {};
+  Completer<void>? _held;
+  bool _loaded = false;
+
+  @override
+  JsLayer _wrap() => createJSInteropWrapper(this) as JsLayer;
+
+  /// Makes every following `load()` wait until the returned completer
+  /// completes.
+  Completer<void> holdLoad() => _held = Completer<void>();
+
+  @override
+  JSPromise<JSObject> load() {
+    loadCount++;
+    return Future<JSObject>(() async {
+      if (failsToLoad) {
+        throw StateError('$id failed to load');
+      }
+      await _held?.future;
+      _loaded = true;
+      return js;
+    }).toJS;
+  }
+
+  JSObject? getStyleLayer(String layerId) {
+    return styleLayerIds.contains(layerId) ? JSObject() : null;
+  }
+
+  void setStyleLayerVisibility(String layerId, String visibility) {
+    if (!_loaded) {
+      throw StateError('$id is not loaded');
+    }
+    this.visibility[layerId] = visibility;
   }
 }
 

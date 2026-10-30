@@ -20,5 +20,16 @@ void main() {
         throwsUnimplementedError,
       );
     });
+
+    test('basemap style layers are web only', () {
+      expect(
+        () => MethodChannelArcgisMapPlugin().setBasemapStyleLayersVisible(
+          mapId: 1,
+          styleLayerIds: ['administrative boundary/level 6/line'],
+          visible: false,
+        ),
+        throwsUnimplementedError,
+      );
+    });
   });
 }
