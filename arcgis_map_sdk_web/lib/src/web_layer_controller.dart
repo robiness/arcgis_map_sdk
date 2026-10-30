@@ -198,6 +198,9 @@ class WebLayerController {
     required JSObject view,
   }) async {
     final map = (view as JsView).map;
+    // Before the wait, so the style is the one given at this call, and one
+    // that cannot be converted fails at once rather than as a failed load.
+    final jsStyle = style.jsify()!;
     await _vectorTileLoads[layerId];
 
     // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
@@ -206,7 +209,7 @@ class WebLayerController {
       throw Exception('Layer with id $layerId not found');
     }
     try {
-      await (layer as JsVectorTileLayer).loadStyle(style.jsify()!).toDart;
+      await (layer as JsVectorTileLayer).loadStyle(jsStyle).toDart;
     } catch (e) {
       if (_isAbortError(e)) return;
       throw Exception('Vector tile layer $layerId failed to load its style: ${_describeLoadError(e)}');

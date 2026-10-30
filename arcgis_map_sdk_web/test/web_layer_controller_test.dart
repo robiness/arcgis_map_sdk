@@ -301,6 +301,99 @@ void main() {
     });
 
     test(
+        'a style set while the layer still loads is applied as it was when set',
+        () async {
+      final constructed = installFakeVectorTileLayers();
+      final view = FakeView(FakeMap()).js;
+      final layers = WebLayerController(mapId: 1);
+      final adding = layers.addVectorTileLayer(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+      final style = _countyStyle(lineColor: '#ffffff');
+
+      final swapping = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: style,
+        view: view,
+      );
+      style['layers'] = <Object?>[];
+      constructed.single.completeLoad();
+      await adding;
+      await swapping;
+
+      expect(constructed.single.loadStyleCalls, [_satelliteStyle]);
+    });
+
+    test(
+        'a style that cannot be converted throws at once, while the layer still loads',
+        () async {
+      final constructed = installFakeVectorTileLayers();
+      final view = FakeView(FakeMap()).js;
+      final layers = WebLayerController(mapId: 1);
+      final adding = layers.addVectorTileLayer(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+
+      final swapping = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: {
+          'layers': [0].map<Object?>((_) => throw StateError('no style')),
+        },
+        view: view,
+      );
+      var settled = false;
+      final failing = expectLater(
+        swapping.whenComplete(() => settled = true),
+        throwsStateError,
+      );
+      await pumpEventQueue();
+      expect(settled, isTrue);
+      await failing;
+
+      constructed.single.completeLoad();
+      await adding;
+      expect(constructed.single.loadStyleCalls, isEmpty);
+    });
+
+    test(
+        'two styles set while the layer loads both complete, and the last one shows',
+        () async {
+      final constructed = installFakeVectorTileLayers();
+      final view = FakeView(FakeMap()).js;
+      final layers = WebLayerController(mapId: 1);
+      final adding = layers.addVectorTileLayer(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+      final counties = constructed.single;
+
+      counties.failNextLoadStyle('AbortError');
+      final overtaken = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _satelliteStyle,
+        view: view,
+      );
+      final last = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+      await pumpEventQueue();
+      expect(counties.loadStyleCalls, isEmpty);
+
+      counties.completeLoad();
+      await adding;
+      await expectLater(overtaken, completes);
+      await expectLater(last, completes);
+      expect(counties.loadStyleCalls, [_satelliteStyle, _mapStyle]);
+    });
+
+    test(
         'a style set while a load that fails is pending throws that the layer '
         'is not found, and the failed layer is gone', () async {
       final constructed = installFakeVectorTileLayers();
