@@ -15,16 +15,22 @@ import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 class BasemapStyleLayers {
   final Map<String, bool> _visible = {};
 
-  /// Records [visible] for [styleLayerIds], then [applyTo] [layers].
+  /// Records [visible] for [styleLayerIds] at once, then [applyTo] the layers
+  /// [layers] completes with.
+  ///
+  /// The layers are a future because the current basemap may still be loading.
+  /// Recording before waiting for them keeps the calls in the order they were
+  /// made: a call still waiting does not overwrite a later one, and one whose
+  /// layers fail to arrive still counts.
   Future<void> setVisible(
     List<String> styleLayerIds, {
     required bool visible,
-    required Iterable<JsLayer> layers,
-  }) {
+    required Future<Iterable<JsLayer>> layers,
+  }) async {
     for (final id in styleLayerIds) {
       _visible[id] = visible;
     }
-    return applyTo(layers);
+    await applyTo(await layers);
   }
 
   /// Sets every recorded id on the vector tile layers among [layers], once

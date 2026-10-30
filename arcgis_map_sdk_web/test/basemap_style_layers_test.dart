@@ -1,8 +1,10 @@
 @TestOn('browser')
 library;
 
+import 'dart:async';
 import 'dart:js_interop';
 
+import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/basemap_style_layers.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,7 +26,7 @@ void main() {
     await BasemapStyleLayers().setVisible(
       [_lineId, _labelId],
       visible: false,
-      layers: [base.js, labels.js],
+      layers: Future.value([base.js, labels.js]),
     );
 
     expect(base.visibility, {_lineId: 'none'});
@@ -38,7 +40,7 @@ void main() {
     await BasemapStyleLayers().setVisible(
       [_lineId],
       visible: false,
-      layers: [imagery.js, base.js],
+      layers: Future.value([imagery.js, base.js]),
     );
 
     expect(imagery.loadCount, 0);
@@ -52,7 +54,7 @@ void main() {
     final done = BasemapStyleLayers().setVisible(
       [_lineId],
       visible: false,
-      layers: [base.js],
+      layers: Future.value([base.js]),
     );
     await pumpEventQueue();
 
@@ -66,8 +68,16 @@ void main() {
 
   test('a later call for an id wins, and shown ids stay recorded', () async {
     final styles = BasemapStyleLayers();
-    await styles.setVisible(['a', 'b'], visible: false, layers: const []);
-    await styles.setVisible(['a'], visible: true, layers: const []);
+    await styles.setVisible(
+      ['a', 'b'],
+      visible: false,
+      layers: Future.value(const []),
+    );
+    await styles.setVisible(
+      ['a'],
+      visible: true,
+      layers: Future.value(const []),
+    );
 
     final fresh = FakeVectorTileLayer(id: 'fresh', styleLayerIds: {'a', 'b'});
     await styles.applyTo([fresh.js]);
@@ -86,13 +96,13 @@ void main() {
     await styles.setVisible(
       [_lineId, _labelId],
       visible: false,
-      layers: [lightGray.js],
+      layers: Future.value([lightGray.js]),
     );
     await styles.applyTo([hybrid.js]);
     await styles.setVisible(
       [_lineId, _labelId],
       visible: true,
-      layers: [hybrid.js],
+      layers: Future.value([hybrid.js]),
     );
     await styles.applyTo([lightGray.js]);
 
@@ -111,11 +121,76 @@ void main() {
     await BasemapStyleLayers().setVisible(
       [_lineId],
       visible: false,
-      layers: [failing.js, base.js],
+      layers: Future.value([failing.js, base.js]),
     );
 
     expect(failing.visibility, isEmpty);
     expect(base.visibility, {_lineId: 'none'});
+  });
+
+  test('a call is kept before the current basemap has loaded', () async {
+    final styles = BasemapStyleLayers();
+    final loading = Completer<List<JsLayer>>();
+    final done = styles.setVisible(
+      [_lineId],
+      visible: false,
+      layers: loading.future,
+    );
+
+    final fresh = FakeVectorTileLayer(
+      id: 'fresh',
+      styleLayerIds: {_lineId, 'water'},
+    );
+    await styles.applyTo([fresh.js]);
+
+    expect(fresh.visibility, {_lineId: 'none'});
+
+    loading.complete(const []);
+    await done;
+  });
+
+  test('a later call wins even when an earlier one waits on a loading basemap',
+      () async {
+    final styles = BasemapStyleLayers();
+    final loading = Completer<List<JsLayer>>();
+    final hidden = styles.setVisible(
+      [_lineId],
+      visible: false,
+      layers: loading.future,
+    );
+    await styles.setVisible(
+      [_lineId],
+      visible: true,
+      layers: Future.value(const []),
+    );
+
+    final loaded = FakeVectorTileLayer(id: 'loaded', styleLayerIds: {_lineId});
+    loading.complete([loaded.js]);
+    await hidden;
+
+    final fresh = FakeVectorTileLayer(id: 'fresh', styleLayerIds: {_lineId});
+    await styles.applyTo([fresh.js]);
+
+    expect(loaded.visibility, {_lineId: 'visible'});
+    expect(fresh.visibility, {_lineId: 'visible'});
+  });
+
+  test('a call is kept when the current basemap fails to load', () async {
+    final styles = BasemapStyleLayers();
+
+    await expectLater(
+      styles.setVisible(
+        [_lineId],
+        visible: false,
+        layers: Future.error(StateError('offline')),
+      ),
+      throwsStateError,
+    );
+
+    final fresh = FakeVectorTileLayer(id: 'fresh', styleLayerIds: {_lineId});
+    await styles.applyTo([fresh.js]);
+
+    expect(fresh.visibility, {_lineId: 'none'});
   });
 
   test(

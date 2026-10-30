@@ -245,7 +245,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       await styleLayers.setVisible(
         styleLayerIds,
         visible: visible,
-        layers: await _currentBasemapLayers(mapId, map),
+        layers: _currentBasemapLayers(mapId, map),
       );
     } catch (e, stack) {
       developer.log('Error changing basemap style layers', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);

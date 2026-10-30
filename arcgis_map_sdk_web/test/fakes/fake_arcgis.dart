@@ -56,7 +56,9 @@ class FakeVectorTileLayer extends FakeLayer {
   bool _loaded = false;
 
   @override
-  JsLayer _wrap() => createJSInteropWrapper(this) as JsLayer;
+  JsLayer _wrap() {
+    return createJSInteropWrapper<FakeVectorTileLayer>(this) as JsLayer;
+  }
 
   /// Makes every following `load()` wait until the returned completer
   /// completes.
@@ -150,8 +152,13 @@ class FakeBasemap {
   final FakeCollection _baseLayers;
   final FakeCollection _referenceLayers;
   bool _loaded;
+  Completer<void>? _held;
 
   late final JsBasemap js = createJSInteropWrapper(this) as JsBasemap;
+
+  /// Makes every following `load()` wait until the returned completer
+  /// completes.
+  Completer<void> holdLoad() => _held = Completer<void>();
 
   List<String> get referenceLayerIds => _referenceLayers.layerIds;
 
@@ -162,7 +169,8 @@ class FakeBasemap {
   JsCollection<JsLayer> get referenceLayers => _referenceLayers.js;
 
   JSPromise<JSObject> load() {
-    return Future<JSObject>(() {
+    return Future<JSObject>(() async {
+      await _held?.future;
       if (!_loaded) {
         _loaded = true;
         _baseLayers.addMany(_faces(_baseLayersOnLoad));

@@ -104,6 +104,29 @@ void main() {
     expect(map.layerIds, ['counties', 'new labels', 'markers']);
   });
 
+  test('labels of a basemap replaced while it loaded stay with it', () async {
+    final hybridLabels = _labels('hybrid labels');
+    final lightGrayLabels = _labels('light-gray labels');
+    final hybrid = FakeBasemap(referenceLayers: [hybridLabels]);
+    final lightGray =
+        FakeBasemap(referenceLayers: [lightGrayLabels], loaded: true);
+    final map = FakeMap(layers: [FakeLayer(id: 'markers')], basemap: hybrid);
+    final loading = hybrid.holdLoad();
+
+    final replaced = moveReferenceLayersBeneathGraphics(map.js);
+    map.basemap = lightGray.js;
+    final current = await moveReferenceLayersBeneathGraphics(map.js);
+    loading.complete();
+
+    expect(await replaced, isNull);
+    expect(map.layerIds, ['light-gray labels', 'markers']);
+    expect(hybrid.referenceLayerIds, ['hybrid labels']);
+    expect(
+      current!.layers.toDart.map((layer) => layer.id),
+      ['light-gray labels'],
+    );
+  });
+
   test('a basemap without labels moves nothing', () async {
     final oldLabels = _labels('old labels');
     final oldBasemap = FakeBasemap(loaded: true);

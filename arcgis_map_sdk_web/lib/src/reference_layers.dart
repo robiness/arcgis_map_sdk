@@ -18,7 +18,8 @@ typedef MovedReferenceLayers = ({JsBasemap basemap, JSArray<JsLayer> layers});
 /// labels.
 ///
 /// Returns the moved layers, to pass as [previous] after the next basemap
-/// change, or null when the basemap has no reference layers.
+/// change, or null when nothing was moved: the basemap has no reference
+/// layers, or the map's basemap changed while it loaded.
 Future<MovedReferenceLayers?> moveReferenceLayersBeneathGraphics(
   JsEsriMap map, {
   MovedReferenceLayers? previous,
@@ -32,6 +33,12 @@ Future<MovedReferenceLayers?> moveReferenceLayersBeneathGraphics(
 
   if (!basemap.loaded) {
     await basemap.load().toDart;
+  }
+
+  // The later change moves its own basemap's labels; these would end up on
+  // top of that basemap.
+  if (!map.basemap.strictEquals(basemap).toDart) {
+    return null;
   }
 
   final referenceLayers = basemap.referenceLayers;

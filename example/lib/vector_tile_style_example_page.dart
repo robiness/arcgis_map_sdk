@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 /// A map at Clonee, County Meath, to check against the real ArcGIS API what
 /// the SDK does to the basemap's own county boundary lines and labels. The
 /// buttons hide and show them, switch between the map and the satellite
-/// basemap and between 2D and 3D, so that what was set stays set across the
-/// switches.
+/// basemap and between 2D and 3D, to check that what was set stays set across
+/// the switches.
 ///
 /// A county layer added to this page expects a VectorTileServer-shaped service
 /// with the source layers `borders`, `area_labels` and `border_labels`, such

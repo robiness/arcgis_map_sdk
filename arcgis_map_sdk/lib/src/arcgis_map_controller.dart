@@ -212,7 +212,9 @@ class ArcgisMapController {
   /// moved beneath the graphics. Ids a layer lacks are skipped. The SDK keeps
   /// the last visibility of every id it was given for the life of the map and
   /// applies it again after every basemap change. Completes once the layers
-  /// of the current basemap have loaded and been changed. Web only for now.
+  /// of the current basemap have loaded and been changed. The visibility is
+  /// kept even when the call throws because the current basemap failed to
+  /// load. Web only for now.
   Future<void> setBasemapStyleLayersVisible({
     required List<String> styleLayerIds,
     required bool visible,
