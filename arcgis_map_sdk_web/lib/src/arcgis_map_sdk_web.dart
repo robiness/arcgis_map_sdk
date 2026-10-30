@@ -11,6 +11,7 @@ import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
 import 'package:arcgis_map_sdk_web/src/esri_request_interceptors.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
+import 'package:arcgis_map_sdk_web/src/reference_layers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -36,7 +37,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   // Basemap labels moved beneath the graphics, with the basemap they came
   // from, so a basemap change can give them back.
-  static final Map<int, ({JsBasemap basemap, JSArray<JsLayer> layers})> _movedReferenceLayers = {};
+  static final Map<int, MovedReferenceLayers> _movedReferenceLayers = {};
 
   // esriConfig.request belongs to the page, so its maps share one registry.
   static EsriRequestInterceptors? _requestInterceptors;
@@ -1313,35 +1314,14 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     });
   }
 
-  /// Moves basemap reference layers (labels) into the map's operational
-  /// layers at index 0 so that graphics layers render on top of them.
-  ///
-  /// The labels moved for an earlier basemap go back to it first: they would
-  /// otherwise stay on top of the new basemap's imagery, and since a basemap
-  /// id always yields the same basemap, that one would come back without
-  /// labels.
   static Future<void> _moveReferenceLayersBeneathGraphics(int mapId, JsEsriMap map) async {
-    final previous = _movedReferenceLayers.remove(mapId);
-    if (previous != null) {
-      map.removeMany(previous.layers);
-      previous.basemap.referenceLayers.addMany(previous.layers);
+    final moved = await moveReferenceLayersBeneathGraphics(
+      map,
+      previous: _movedReferenceLayers.remove(mapId),
+    );
+    if (moved != null) {
+      _movedReferenceLayers[mapId] = moved;
     }
-
-    final basemap = map.basemap as JsBasemap;
-
-    if (!basemap.loaded) {
-      await basemap.load().toDart;
-    }
-
-    final refLayers = basemap.referenceLayers;
-    final items = refLayers.toArray();
-    if (items.toDart.isEmpty) {
-      return;
-    }
-
-    map.addMany(items, 0);
-    refLayers.removeAll();
-    _movedReferenceLayers[mapId] = (basemap: basemap, layers: items);
   }
 }
 

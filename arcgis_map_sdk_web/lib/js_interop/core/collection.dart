@@ -12,6 +12,7 @@ import 'dart:js_interop';
 extension type JsCollection<T extends JSAny?>._(JSObject _) implements JSObject {
   external int get length;
   external T? getItemAt(int index);
+  external int indexOf(T item);
   external void add(T item, [int? index]);
   external T? remove(T item);
   external void removeAll();
