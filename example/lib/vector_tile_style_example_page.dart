@@ -11,11 +11,11 @@ import 'package:flutter/material.dart';
 /// layer following with its own palette, and between 2D and 3D, to check that
 /// what was set stays set across the switches.
 ///
-/// The county layer expects a VectorTileServer-shaped service at
-/// `VECTOR_TILE_SERVICE_URL` with the source layers `borders`, `area_labels`
-/// and `border_labels`, such as the one in `example/spike/server.py` on the
-/// `spike/vector-tiles` branch. Its requests carry `VECTOR_TILE_TOKEN` as a
-/// bearer token.
+/// The county layer expects a VectorTileServer-shaped service: a
+/// `VectorTileServer` description at `--dart-define=VECTOR_TILE_SERVICE_URL`,
+/// and tiles beneath it at `v/{version}/tile/{z}/{y}/{x}.pbf` with the source
+/// layers `borders`, `area_labels` and `border_labels`. Its requests carry
+/// `--dart-define=VECTOR_TILE_TOKEN` as a bearer token.
 class VectorTileStyleExamplePage extends StatefulWidget {
   const VectorTileStyleExamplePage({super.key});
 

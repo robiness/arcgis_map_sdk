@@ -155,8 +155,7 @@ class WebLayerController {
     required JSObject view,
   }) async {
     final map = (view as JsView).map;
-    // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
-    if (map.findLayerById(layerId) != null) {
+    if (_layerInMap(map, layerId) != null) {
       throw StateError('A layer with id $layerId is already in the map');
     }
 
@@ -203,8 +202,7 @@ class WebLayerController {
     final jsStyle = style.jsify()!;
     await _vectorTileLoads[layerId];
 
-    // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
-    final layer = map.findLayerById(layerId) as JsLayer?;
+    final layer = _layerInMap(map, layerId);
     if (layer == null || layer.type != 'vector-tile') {
       throw Exception('Layer with id $layerId not found');
     }
@@ -223,10 +221,15 @@ class WebLayerController {
     required bool visible,
     required JSObject view,
   }) {
-    // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
-    final layer = (view as JsView).map.findLayerById(layerId) as JsLayer? ??
+    final layer = _layerInMap((view as JsView).map, layerId) ??
         _deferredSceneLayers.where((sceneLayer) => sceneLayer.id == layerId).firstOrNull;
     layer?.visible = visible;
+  }
+
+  /// The layer [layerId] of [map], or null. Not looked up in [_layers], as
+  /// ArcgisMapWeb.destroyLayer removes layers from the map only.
+  static JsLayer? _layerInMap(JsEsriMap map, String layerId) {
+    return map.findLayerById(layerId) as JsLayer?;
   }
 
   /// `<name>: <message>` of the esri/core/Error ArcGIS rejects a load or a

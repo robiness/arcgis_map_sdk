@@ -86,6 +86,9 @@ class ArcgisMapController {
 
   /// Adds a VectorTileLayer built from [style], a Mapbox GL style object.
   /// [index] is the position in the map's operational layers (0 = bottom).
+  /// Basemap labels moved there by `showLabelsBeneathGraphics` count toward
+  /// it and are placed again after each basemap change; index 0 always lies
+  /// beneath them.
   /// Completes once the layer has loaded (its service description and style
   /// resolved); throws when it cannot load, and then leaves no layer behind.
   /// Register headers for the service with [setRequestHeaders] first; the

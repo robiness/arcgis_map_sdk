@@ -363,7 +363,8 @@ void main() {
         'two styles set while the layer loads both complete, and the last one shows',
         () async {
       final constructed = installFakeVectorTileLayers();
-      final view = FakeView(FakeMap()).js;
+      final map = FakeMap();
+      final view = FakeView(map).js;
       final layers = WebLayerController(mapId: 1);
       final adding = layers.addVectorTileLayer(
         layerId: 'counties',
@@ -391,6 +392,7 @@ void main() {
       await expectLater(overtaken, completes);
       await expectLater(last, completes);
       expect(counties.loadStyleCalls, [_satelliteStyle, _mapStyle]);
+      expect(map.layerIds, ['counties']);
     });
 
     test(
