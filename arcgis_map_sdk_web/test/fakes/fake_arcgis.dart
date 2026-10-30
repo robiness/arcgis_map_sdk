@@ -58,9 +58,14 @@ class FakeVectorTileLayer extends FakeLayer {
   final Object? properties;
 
   final Map<String, String> visibility = {};
+
+  /// The styles `loadStyle` was given, dartified.
+  final List<Object?> loadStyleCalls = [];
+
   Completer<void>? _held;
   ({JSAny? reason})? _rejection;
   bool _loaded = false;
+  final List<String> _loadStyleFailures = [];
 
   @override
   JsLayer _wrap() {
@@ -120,6 +125,29 @@ class FakeVectorTileLayer extends FakeLayer {
       throw StateError('$id is not loaded');
     }
     this.visibility[layerId] = visibility;
+  }
+
+  /// Makes the next `loadStyle` reject as ArcGIS does, with an error object
+  /// named [name], such as `AbortError` for a swap a later one overtook. Each
+  /// call fails one more `loadStyle`.
+  void failNextLoadStyle(String name) => _loadStyleFailures.add(name);
+
+  JSPromise<JSAny?> loadStyle(JSAny style) {
+    loadStyleCalls.add(style.dartify());
+    final failure =
+        _loadStyleFailures.isEmpty ? null : _loadStyleFailures.removeAt(0);
+    return JSPromise<JSAny?>(
+      (JSFunction resolve, JSFunction reject) {
+        if (failure == null) {
+          resolve.callAsFunction(null, js);
+        } else {
+          reject.callAsFunction(
+            null,
+            {'name': failure, 'message': 'loadStyle failed'}.jsify(),
+          );
+        }
+      }.toJS,
+    );
   }
 }
 
@@ -269,12 +297,8 @@ class FakeView {
 /// holding its load until [FakeVectorTileLayer.completeLoad] or
 /// [FakeVectorTileLayer.failLoad].
 List<FakeVectorTileLayer> installFakeVectorTileLayers() {
-  final previous = globalContext['esri'];
-  addTearDown(() => globalContext['esri'] = previous);
-
   final constructed = <FakeVectorTileLayer>[];
-  final layers = JSObject();
-  layers['VectorTileLayer'] = (JSObject properties) {
+  JsLayer construct(JSObject properties) {
     final layer = FakeVectorTileLayer(
       id: (properties['id']! as JSString).toDart,
       styleLayerIds: const {},
@@ -282,9 +306,38 @@ List<FakeVectorTileLayer> installFakeVectorTileLayers() {
     )..holdLoad();
     constructed.add(layer);
     return layer.js;
-  }.toJS;
+  }
+
+  _installLayerConstructor('VectorTileLayer', construct.toJS);
+  return constructed;
+}
+
+/// Puts a fake `esri.layers.SceneLayer` constructor on the page for the rest
+/// of the test. The layers it constructs join the returned list.
+List<FakeLayer> installFakeSceneLayers() {
+  final constructed = <FakeLayer>[];
+  JsLayer construct(JSObject properties) {
+    final layer = FakeLayer(
+      id: (properties['id']! as JSString).toDart,
+      type: 'scene',
+    );
+    constructed.add(layer);
+    return layer.js;
+  }
+
+  _installLayerConstructor('SceneLayer', construct.toJS);
+  return constructed;
+}
+
+/// Makes `esri.layers.<name>` the only layer constructor on the page for the
+/// rest of the test.
+void _installLayerConstructor(String name, JSFunction constructor) {
+  final previous = globalContext['esri'];
+  addTearDown(() => globalContext['esri'] = previous);
+
+  final layers = JSObject();
+  layers[name] = constructor;
   final esri = JSObject();
   esri['layers'] = layers;
   globalContext['esri'] = esri;
-  return constructed;
 }

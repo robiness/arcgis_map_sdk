@@ -42,5 +42,26 @@ void main() {
         throwsUnimplementedError,
       );
     });
+
+    test('style and visibility are web only', () {
+      final plugin = MethodChannelArcgisMapPlugin();
+
+      expect(
+        () => plugin.setVectorTileStyle(
+          mapId: 1,
+          layerId: 'counties',
+          style: const {'version': 8},
+        ),
+        throwsUnimplementedError,
+      );
+      expect(
+        () => plugin.setLayerVisibility(
+          mapId: 1,
+          layerId: 'counties',
+          visible: false,
+        ),
+        throwsUnimplementedError,
+      );
+    });
   });
 }

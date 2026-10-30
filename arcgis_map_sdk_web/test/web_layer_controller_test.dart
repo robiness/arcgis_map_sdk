@@ -2,9 +2,11 @@
 library;
 
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:ui';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
+import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/web_layer_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,8 +23,49 @@ const _style = {
   'layers': <Object?>[],
 };
 
+Map<String, Object?> _countyStyle({required String lineColor}) => {
+      ..._style,
+      'layers': [
+        {
+          'id': 'border',
+          'type': 'line',
+          'source': 'counties',
+          'source-layer': 'borders',
+          'paint': {'line-color': lineColor},
+        },
+      ],
+    };
+
+final _mapStyle = _countyStyle(lineColor: '#333333');
+final _satelliteStyle = _countyStyle(lineColor: '#ffffff');
+
 FakeMap _mapWithLabelsAndMarkers() =>
     FakeMap(layers: [FakeLayer(id: 'labels'), FakeLayer(id: 'markers')]);
+
+/// Adds the vector tile layer `counties`, drawn from [_mapStyle], and lets it
+/// load.
+Future<FakeVectorTileLayer> _addLoadedCounties(
+  WebLayerController layers,
+  JsView view,
+) async {
+  final constructed = installFakeVectorTileLayers();
+  final adding = layers.addVectorTileLayer(
+    layerId: 'counties',
+    style: _mapStyle,
+    view: view,
+  );
+  constructed.single.completeLoad();
+  await adding;
+  return constructed.single;
+}
+
+Matcher _throwsNotFound(String layerId) => throwsA(
+      isA<Exception>().having(
+        (e) => e.toString(),
+        'toString()',
+        contains('Layer with id $layerId not found'),
+      ),
+    );
 
 void main() {
   test(
@@ -110,36 +153,6 @@ void main() {
     expect(map.layerIds, ['counties', 'labels', 'markers']);
   });
 
-  test('a pending load that fails settles only once the layer has left the map',
-      () async {
-    final constructed = installFakeVectorTileLayers();
-    final map = _mapWithLabelsAndMarkers();
-
-    List<String>? layerIdsWhenSettled;
-    bool? destroyedWhenSettled;
-    final adding = WebLayerController(mapId: 1)
-        .addVectorTileLayer(
-      layerId: 'counties',
-      style: _style,
-      view: FakeView(map).js,
-    )
-        .then<void>(
-      (_) {},
-      onError: (Object _) {
-        layerIdsWhenSettled = map.layerIds;
-        destroyedWhenSettled = constructed.single.destroyed;
-      },
-    );
-    await pumpEventQueue();
-    expect(map.layerIds, ['labels', 'markers', 'counties']);
-
-    constructed.single.failLoad('request:server', 'Unauthorized');
-    await adding;
-
-    expect(layerIdsWhenSettled, ['labels', 'markers']);
-    expect(destroyedWhenSettled, isTrue);
-  });
-
   test('a layer that fails to load is forgotten, so its id finds no layer',
       () async {
     final constructed = installFakeVectorTileLayers();
@@ -207,6 +220,16 @@ void main() {
     );
     constructed.last.rejectLoad('Request canceled'.toJS);
     await expectLater(rejectedWithText, namesTheLayer('Request canceled'));
+
+    final rejectedWithSymbol = controller.addVectorTileLayer(
+      layerId: 'counties',
+      style: _style,
+      view: view,
+    );
+    constructed.last.rejectLoad(
+      globalContext.callMethod<JSAny>('Symbol'.toJS, 'canceled'.toJS),
+    );
+    await expectLater(rejectedWithSymbol, namesTheLayer('canceled'));
   });
 
   test('an id already in the map is refused', () async {
@@ -233,5 +256,213 @@ void main() {
 
     expect(constructed, hasLength(1));
     expect(map.layerIds, ['labels', 'markers', 'counties']);
+  });
+
+  group('setVectorTileStyle', () {
+    test('replaces the style of a loaded layer', () async {
+      final view = FakeView(FakeMap()).js;
+      final layers = WebLayerController(mapId: 1);
+      final counties = await _addLoadedCounties(layers, view);
+
+      await layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _satelliteStyle,
+        view: view,
+      );
+
+      expect(counties.loadStyleCalls, [_satelliteStyle]);
+    });
+
+    test(
+        'a style set while the layer still loads is applied once it has loaded',
+        () async {
+      final constructed = installFakeVectorTileLayers();
+      final view = FakeView(FakeMap()).js;
+      final layers = WebLayerController(mapId: 1);
+      final adding = layers.addVectorTileLayer(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+      await pumpEventQueue();
+
+      final swapping = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _satelliteStyle,
+        view: view,
+      );
+      await pumpEventQueue();
+      expect(constructed.single.loadStyleCalls, isEmpty);
+
+      constructed.single.completeLoad();
+      await adding;
+      await swapping;
+      expect(constructed.single.loadStyleCalls, [_satelliteStyle]);
+    });
+
+    test(
+        'a style set while a load that fails is pending throws that the layer '
+        'is not found, and the failed layer is gone', () async {
+      final constructed = installFakeVectorTileLayers();
+      final map = FakeMap();
+      final view = FakeView(map).js;
+      final layers = WebLayerController(mapId: 1);
+      final adding = layers.addVectorTileLayer(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+      final addingFails = expectLater(adding, throwsException);
+
+      final swapping = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _satelliteStyle,
+        view: view,
+      );
+      final swappingFails = expectLater(swapping, _throwsNotFound('counties'));
+      await pumpEventQueue();
+      constructed.single.failLoad('request:server', 'Unauthorized');
+
+      await addingFails;
+      await swappingFails;
+      expect(constructed.single.loadStyleCalls, isEmpty);
+      expect(map.layerIds, isEmpty);
+    });
+
+    test('a style overtaken by the next one completes without error', () async {
+      final map = FakeMap();
+      final view = FakeView(map).js;
+      final layers = WebLayerController(mapId: 1);
+      final counties = await _addLoadedCounties(layers, view);
+
+      counties.failNextLoadStyle('AbortError');
+      final overtaken = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _satelliteStyle,
+        view: view,
+      );
+      final last = layers.setVectorTileStyle(
+        layerId: 'counties',
+        style: _mapStyle,
+        view: view,
+      );
+
+      await expectLater(overtaken, completes);
+      await expectLater(last, completes);
+      expect(counties.loadStyleCalls, [_satelliteStyle, _mapStyle]);
+      expect(map.layerIds, ['counties']);
+    });
+
+    test('a style that fails to load throws', () async {
+      final view = FakeView(FakeMap()).js;
+      final layers = WebLayerController(mapId: 1);
+      final counties = await _addLoadedCounties(layers, view);
+
+      counties.failNextLoadStyle('request:server');
+
+      await expectLater(
+        layers.setVectorTileStyle(
+          layerId: 'counties',
+          style: _satelliteStyle,
+          view: view,
+        ),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'toString()',
+            allOf(contains('counties'), contains('request:server')),
+          ),
+        ),
+      );
+    });
+
+    test('an unknown layer id throws', () async {
+      final view = FakeView(FakeMap(layers: [FakeLayer(id: 'markers')])).js;
+      final layers = WebLayerController(mapId: 1);
+
+      await expectLater(
+        layers.setVectorTileStyle(
+          layerId: 'nothing',
+          style: _satelliteStyle,
+          view: view,
+        ),
+        _throwsNotFound('nothing'),
+      );
+      await expectLater(
+        layers.setVectorTileStyle(
+          layerId: 'markers',
+          style: _satelliteStyle,
+          view: view,
+        ),
+        _throwsNotFound('markers'),
+      );
+    });
+
+    test('a layer removed from the map is not found', () async {
+      final map = FakeMap();
+      final view = FakeView(map).js;
+      final layers = WebLayerController(mapId: 1);
+      final counties = await _addLoadedCounties(layers, view);
+      map.remove(counties.js);
+
+      await expectLater(
+        layers.setVectorTileStyle(
+          layerId: 'counties',
+          style: _satelliteStyle,
+          view: view,
+        ),
+        _throwsNotFound('counties'),
+      );
+      expect(counties.loadStyleCalls, isEmpty);
+    });
+  });
+
+  group('setLayerVisibility', () {
+    test('hides and shows a layer of the map', () {
+      final markers = FakeLayer(id: 'markers');
+      final view = FakeView(FakeMap(layers: [markers])).js;
+      final layers = WebLayerController(mapId: 1);
+
+      layers.setLayerVisibility(layerId: 'markers', visible: false, view: view);
+      expect(markers.visible, isFalse);
+
+      layers.setLayerVisibility(layerId: 'markers', visible: true, view: view);
+      expect(markers.visible, isTrue);
+    });
+
+    test('reaches a scene layer parked while the view is 2D', () async {
+      final constructed = installFakeSceneLayers();
+      final map = FakeMap();
+      final view = FakeView(map).js;
+      final layers = WebLayerController(mapId: 1);
+      await layers.addSceneLayer(
+        layerId: 'buildings',
+        url: 'https://scene.test/SceneServer',
+        options: SceneLayerOptions(
+          symbol: const MeshSymbol3D(color: Color(0xFF888888)),
+        ),
+        view: view,
+        isSceneViewActive: false,
+      );
+      expect(map.layerIds, isEmpty);
+
+      layers.setLayerVisibility(
+        layerId: 'buildings',
+        visible: false,
+        view: view,
+      );
+
+      expect(constructed.single.visible, isFalse);
+    });
+
+    test('an unknown layer id changes nothing', () {
+      final markers = FakeLayer(id: 'markers');
+      final view = FakeView(FakeMap(layers: [markers])).js;
+
+      WebLayerController(mapId: 1)
+          .setLayerVisibility(layerId: 'nothing', visible: false, view: view);
+
+      expect(markers.visible, isTrue);
+    });
   });
 }

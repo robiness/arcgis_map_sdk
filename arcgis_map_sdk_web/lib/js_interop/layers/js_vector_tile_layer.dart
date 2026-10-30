@@ -21,4 +21,8 @@ extension type JsVectorTileLayer._(JSObject _) implements JsLayer {
   /// Shows (`'visible'`) or hides (`'none'`) the style layer named [layerId].
   /// Throws before the layer has loaded; ignores an unknown id after.
   external void setStyleLayerVisibility(String layerId, String visibility);
+
+  /// Replaces the whole style with [style]. A call made before the previous
+  /// one has finished rejects the previous one with an `AbortError`.
+  external JSPromise<JSAny?> loadStyle(JSAny style);
 }

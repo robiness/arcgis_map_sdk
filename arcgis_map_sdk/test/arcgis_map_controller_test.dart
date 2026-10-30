@@ -52,6 +52,19 @@ void main() {
     );
     expect(identical(platform.vectorTileStyle, style), isTrue);
   });
+
+  test('style and visibility reach the platform with the map id', () async {
+    final style = <String, Object?>{'version': 8, 'layers': <Object?>[]};
+
+    await controller.setVectorTileStyle(layerId: 'counties', style: style);
+    controller.setLayerVisibility(layerId: 'counties', visible: false);
+
+    expect(platform.calls, [
+      ('setVectorTileStyle', 7, 'counties'),
+      ('setLayerVisibility', 7, ('counties', false)),
+    ]);
+    expect(identical(platform.vectorTileStyle, style), isTrue);
+  });
 }
 
 class _RecordingPlatform extends ArcgisMapPlatform {
@@ -107,5 +120,24 @@ class _RecordingPlatform extends ArcgisMapPlatform {
   }) async {
     vectorTileLayerCalls.add((mapId: mapId, layerId: layerId, index: index));
     vectorTileStyle = style;
+  }
+
+  @override
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) async {
+    calls.add(('setVectorTileStyle', mapId, layerId));
+    vectorTileStyle = style;
+  }
+
+  @override
+  void setLayerVisibility({
+    required int mapId,
+    required String layerId,
+    required bool visible,
+  }) {
+    calls.add(('setLayerVisibility', mapId, (layerId, visible)));
   }
 }

@@ -107,6 +107,31 @@ class ArcgisMapWebController {
     );
   }
 
+  Future<void> setVectorTileStyle({
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    final view = _activeView;
+    if (view == null) throw Exception('Map view not initialized');
+
+    return _layerController.setVectorTileStyle(
+      layerId: layerId,
+      style: style,
+      view: view,
+    );
+  }
+
+  void setLayerVisibility({required String layerId, required bool visible}) {
+    final view = _activeView;
+    if (view == null) throw Exception('Map view not initialized');
+
+    _layerController.setLayerVisibility(
+      layerId: layerId,
+      visible: visible,
+      view: view,
+    );
+  }
+
   /// Exports an image of the currently visible map view
   Future<Uint8List> exportImage() {
     final view = _activeView;

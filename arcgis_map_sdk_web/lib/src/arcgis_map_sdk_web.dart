@@ -159,6 +159,35 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) async {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    try {
+      await controller.setVectorTileStyle(layerId: layerId, style: style);
+    } catch (e, stack) {
+      developer.log('Error setting the style of vector tile layer $layerId', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      rethrow;
+    }
+  }
+
+  @override
+  void setLayerVisibility({required int mapId, required String layerId, required bool visible}) {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    controller.setLayerVisibility(layerId: layerId, visible: visible);
+  }
+
+  @override
   void addViewPadding(int mapId, ViewPadding padding) {
     final controller = _controllers[mapId];
     if (controller == null) {

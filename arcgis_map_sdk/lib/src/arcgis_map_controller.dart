@@ -105,6 +105,33 @@ class ArcgisMapController {
     );
   }
 
+  /// Replaces the whole style of a layer added by [addVectorTileLayer].
+  /// A style set while the layer still loads waits for that load. A swap
+  /// overtaken by a later one completes without error. The layer's
+  /// visibility stays as it is. Throws when the style cannot load, with an
+  /// error that names the layer, and when [layerId] names no vector tile
+  /// layer of the map. Web only for now.
+  Future<void> setVectorTileStyle({
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    return ArcgisMapPlatform.instance.setVectorTileStyle(
+      mapId: mapId,
+      layerId: layerId,
+      style: style,
+    );
+  }
+
+  /// Shows or hides any operational layer. An id the map does not know
+  /// changes nothing. Web only for now.
+  void setLayerVisibility({required String layerId, required bool visible}) {
+    ArcgisMapPlatform.instance.setLayerVisibility(
+      mapId: mapId,
+      layerId: layerId,
+      visible: visible,
+    );
+  }
+
   Future<void> _onCall(MethodCall call) async {
     final method = call.method;
     switch (method) {

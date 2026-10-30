@@ -185,16 +185,73 @@ class WebLayerController {
     await loading;
   }
 
-  /// `<name>: <message>` of the esri/core/Error ArcGIS rejects a load with.
-  /// A rejection with a JS primitive reaches Dart as a Dart value, one with
-  /// null or undefined as a [NullRejectionException]; those are shown as
-  /// they are.
+  /// Replaces the whole style of the vector tile layer [layerId] with
+  /// [style].
+  ///
+  /// A style set while the layer still loads waits for that load, which
+  /// `loadStyle` would otherwise abort. A swap overtaken by a later one is
+  /// rejected with an `AbortError` and completes here without error, as the
+  /// later style is the one that shows.
+  Future<void> setVectorTileStyle({
+    required String layerId,
+    required Map<String, Object?> style,
+    required JSObject view,
+  }) async {
+    final map = (view as JsView).map;
+    await _vectorTileLoads[layerId];
+
+    // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
+    final layer = map.findLayerById(layerId) as JsLayer?;
+    if (layer == null || layer.type != 'vector-tile') {
+      throw Exception('Layer with id $layerId not found');
+    }
+    try {
+      await (layer as JsVectorTileLayer).loadStyle(style.jsify()!).toDart;
+    } catch (e) {
+      if (_isAbortError(e)) return;
+      throw Exception('Vector tile layer $layerId failed to load its style: ${_describeLoadError(e)}');
+    }
+  }
+
+  /// Shows or hides the layer [layerId] of the map, or a scene layer parked
+  /// while the view is 2D. An unknown id changes nothing.
+  void setLayerVisibility({
+    required String layerId,
+    required bool visible,
+    required JSObject view,
+  }) {
+    // Not _layers: ArcgisMapWeb.destroyLayer removes layers from the map only.
+    final layer = (view as JsView).map.findLayerById(layerId) as JsLayer? ??
+        _deferredSceneLayers.where((sceneLayer) => sceneLayer.id == layerId).firstOrNull;
+    layer?.visible = visible;
+  }
+
+  /// `<name>: <message>` of the esri/core/Error ArcGIS rejects a load or a
+  /// style with, anything else as it is. A rejection with a JS string, number
+  /// or boolean reaches Dart as a Dart value, one with null or undefined as a
+  /// [NullRejectionException].
   static String _describeLoadError(Object error) {
     if (error is NullRejectionException || error is String || error is num || error is bool) {
       return '$error';
     }
-    final arcgisError = error as JSObject;
-    return '${arcgisError['name']}: ${arcgisError['message']}';
+    try {
+      final arcgisError = error as JSObject;
+      return '${arcgisError['name']}: ${arcgisError['message']}';
+    } catch (_) {
+      // Neither an object nor a primitive with a Dart counterpart, such as a
+      // JS symbol.
+      return '$error';
+    }
+  }
+
+  /// Whether [error] is the esri/core/Error `loadStyle` rejects with once a
+  /// later call has taken over.
+  static bool _isAbortError(Object error) {
+    try {
+      return ((error as JSObject)['name'] as JSString?)?.toDart == 'AbortError';
+    } catch (_) {
+      return false;
+    }
   }
 
   // Graphics Management

@@ -46,6 +46,24 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    throw UnimplementedError('setVectorTileStyle() has not been implemented.');
+  }
+
+  @override
+  void setLayerVisibility({
+    required int mapId,
+    required String layerId,
+    required bool visible,
+  }) {
+    throw UnimplementedError('setLayerVisibility() has not been implemented.');
+  }
+
+  @override
   Future<Uint8List> exportImage(int mapId) {
     return _methodChannelBuilder(mapId)
         .invokeMethod<Uint8List>("export_image")

@@ -65,6 +65,22 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('addVectorTileLayer() has not been implemented.');
   }
 
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    throw UnimplementedError('setVectorTileStyle() has not been implemented.');
+  }
+
+  void setLayerVisibility({
+    required int mapId,
+    required String layerId,
+    required bool visible,
+  }) {
+    throw UnimplementedError('setLayerVisibility() has not been implemented.');
+  }
+
   Stream<double> getZoom(int mapId) {
     throw UnimplementedError('getZoom() has not been implemented');
   }

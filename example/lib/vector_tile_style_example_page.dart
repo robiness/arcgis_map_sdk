@@ -6,9 +6,10 @@ import 'package:flutter/material.dart';
 /// A map at Clonee, County Meath, to check against the real ArcGIS API a
 /// county layer drawn from a vector tile style, and what the SDK does to the
 /// basemap's own county boundary lines and labels. Once the county layer has
-/// loaded, the basemap's are hidden. The buttons hide and show them, switch
-/// between the map and the satellite basemap and between 2D and 3D, to check
-/// that what was set stays set across the switches.
+/// loaded, the basemap's are hidden. The buttons hide and show them and the
+/// county layer, switch between the map and the satellite basemap, the county
+/// layer following with its own palette, and between 2D and 3D, to check that
+/// what was set stays set across the switches.
 ///
 /// The county layer expects a VectorTileServer-shaped service at
 /// `VECTOR_TILE_SERVICE_URL` with the source layers `borders`, `area_labels`
@@ -52,6 +53,11 @@ class _VectorTileStyleExamplePageState
   var _is3d = false;
   var _isSatellite = false;
   var _areBasemapBoundariesHidden = false;
+
+  /// Whether the county layer was added, from the start of its load on; a
+  /// style set during the load waits for it.
+  var _hasCountyLayer = false;
+  var _areCountiesHidden = false;
 
   /// A dark line with a white halo on the map, a white line with a dark halo
   /// on satellite.
@@ -148,20 +154,26 @@ class _VectorTileStyleExamplePageState
       ),
     );
 
+    if (!mounted) return;
+    setState(() => _hasCountyLayer = true);
     try {
       await controller.addVectorTileLayer(
         layerId: 'counties',
-        style: _countyStyle(satellite: false),
+        style: _countyStyle(satellite: _isSatellite),
         index: 0,
       );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('$e')));
-      }
+      if (mounted) setState(() => _hasCountyLayer = false);
+      _showError(e);
       return;
     }
     await _setBasemapBoundariesHidden(true);
+  }
+
+  void _showError(Object error) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('$error')));
   }
 
   void _toggleMapStyle() {
@@ -171,8 +183,28 @@ class _VectorTileStyleExamplePageState
 
   Future<void> _toggleBasemap() async {
     setState(() => _isSatellite = !_isSatellite);
+    if (_hasCountyLayer) _followBasemapWithCountyStyle();
     await _controller?.toggleBaseMap(
       baseMap: _isSatellite ? BaseMap.osmHybrid : BaseMap.osmLightGray,
+    );
+  }
+
+  Future<void> _followBasemapWithCountyStyle() async {
+    try {
+      await _controller?.setVectorTileStyle(
+        layerId: 'counties',
+        style: _countyStyle(satellite: _isSatellite),
+      );
+    } catch (e) {
+      _showError(e);
+    }
+  }
+
+  void _toggleCounties() {
+    setState(() => _areCountiesHidden = !_areCountiesHidden);
+    _controller?.setLayerVisibility(
+      layerId: 'counties',
+      visible: !_areCountiesHidden,
     );
   }
 
@@ -230,6 +262,14 @@ class _VectorTileStyleExamplePageState
                       _areBasemapBoundariesHidden
                           ? 'Show basemap boundaries'
                           : 'Hide basemap boundaries',
+                    ),
+                  ),
+                ),
+                PointerInterceptorWeb(
+                  child: ElevatedButton(
+                    onPressed: _hasCountyLayer ? _toggleCounties : null,
+                    child: Text(
+                      _areCountiesHidden ? 'Show counties' : 'Hide counties',
                     ),
                   ),
                 ),
