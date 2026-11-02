@@ -180,7 +180,8 @@ class WebLayerController {
 
       await featureLayer.applyEdits(edits).toDart;
     } else {
-      throw Exception('Layer $layerId is neither a GraphicsLayer nor a FeatureLayer');
+      throw Exception(
+          'Layer $layerId is neither a GraphicsLayer nor a FeatureLayer');
     }
 
     // Track for visibility calculations
@@ -204,7 +205,8 @@ class WebLayerController {
     final jsLayer = layer as JsLayer;
     final layerType = jsLayer.type;
     if (layerType != 'graphics') {
-      throw Exception('Layer $layerId is not a graphics layer (type: $layerType)');
+      throw Exception(
+          'Layer $layerId is not a graphics layer (type: $layerType)');
     }
     final graphicsLayer = layer as JsGraphicsLayer;
 
@@ -276,7 +278,10 @@ class WebLayerController {
   }) async {
     final target = <String, dynamic>{
       'center': [point.longitude, point.latitude],
-      if (scale != null) 'scale': scale else if (zoomLevel != null) 'zoom': zoomLevel,
+      if (scale != null)
+        'scale': scale
+      else if (zoomLevel != null)
+        'zoom': zoomLevel,
     };
 
     // For 3D views, set camera properties
@@ -294,7 +299,9 @@ class WebLayerController {
 
     final jsTarget = target.jsify()! as JSObject;
 
-    final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
+    final options = animationOptions != null
+        ? animationOptions.toMap().jsify()! as JSObject
+        : null;
 
     await (view as JsView).goTo(jsTarget, options).toDart;
   }
@@ -331,7 +338,8 @@ class WebLayerController {
 
     final target = extentData.jsify()! as JSObject;
 
-    final options = padding != null ? {'padding': padding}.jsify()! as JSObject : null;
+    final options =
+        padding != null ? {'padding': padding}.jsify()! as JSObject : null;
 
     await (view as JsView).goTo(target, options).toDart;
   }
@@ -348,12 +356,15 @@ class WebLayerController {
 
       final target = {'zoom': newZoom}.jsify()! as JSObject;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
+      final options = animationOptions != null
+          ? animationOptions.toMap().jsify()! as JSObject
+          : null;
 
       await view.goTo(target, options).toDart;
       return true;
     } catch (e, stack) {
-      developer.log('Error zooming in', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error zooming in',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -370,19 +381,23 @@ class WebLayerController {
 
       final target = {'zoom': newZoom}.jsify()! as JSObject;
 
-      final options = animationOptions != null ? animationOptions.toMap().jsify()! as JSObject : null;
+      final options = animationOptions != null
+          ? animationOptions.toMap().jsify()! as JSObject
+          : null;
 
       await view.goTo(target, options).toDart;
       return true;
     } catch (e, stack) {
-      developer.log('Error zooming out', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error zooming out',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
 
   // Export and Screenshot
 
-  Future<Uint8List> exportImage(JSObject view, {required bool isSceneView}) async {
+  Future<Uint8List> exportImage(JSObject view,
+      {required bool isSceneView}) async {
     try {
       JSPromise<JSObject> screenshotPromise;
 
@@ -398,7 +413,8 @@ class WebLayerController {
 
       return base64Decode(base64Data);
     } catch (e, stack) {
-      developer.log('Error exporting image', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error exporting image',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -406,7 +422,8 @@ class WebLayerController {
   // Utility Methods
 
   void setMouseCursor(SystemMouseCursor cursor) {
-    final container = web.document.getElementById('map-$mapId') as web.HTMLElement?;
+    final container =
+        web.document.getElementById('map-$mapId') as web.HTMLElement?;
     if (container == null) return;
 
     container.style.cursor = cssCursorFor(cursor);
@@ -465,7 +482,8 @@ class WebLayerController {
 
       return true;
     } catch (e, stack) {
-      developer.log('Error destroying layer', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error destroying layer',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       return false;
     }
   }
@@ -557,8 +575,7 @@ class WebLayerController {
       map.remove(sl);
       _deferredSceneLayers.add(sl);
     }
-    if (detached.isNotEmpty) {
-    }
+    if (detached.isNotEmpty) {}
   }
 
   void addViewPadding({
@@ -612,7 +629,6 @@ class WebLayerController {
         await (layer as JsSceneLayer).load().toDart;
       }
     }
-
   }
 
   List<Graphic> getGraphicsInView(JSObject view) {
@@ -622,7 +638,10 @@ class WebLayerController {
 
   List<String> getVisibleGraphicIds(JSObject view) {
     // Extract IDs from visible graphics
-    return _graphicsInView.map((g) => g.getAttributesId()).where((id) => id.isNotEmpty).toList();
+    return _graphicsInView
+        .map((g) => g.getAttributesId())
+        .where((id) => id.isNotEmpty)
+        .toList();
   }
 
   Future<void> updateIsAttributionTextVisible({

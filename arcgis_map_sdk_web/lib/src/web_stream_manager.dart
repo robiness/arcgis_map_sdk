@@ -36,8 +36,7 @@ class WebStreamManager {
   // Track which streams have been initialized for each view
   final Set<String> _initializedStreams = {};
 
-  Future<void> initialize() async {
-  }
+  Future<void> initialize() async {}
 
   // Zoom Stream Management
   Stream<double> getZoom(JsView view) {
@@ -186,7 +185,6 @@ class WebStreamManager {
     lowerLeftProps['spatialReference'] = sr;
     final lowerLeft = JsPoint(lowerLeftProps);
 
-
     return BoundingBox(
       height: extent.height,
       width: extent.width,
@@ -287,7 +285,8 @@ class WebStreamManager {
       // No hit or no attributes
       controller.add(null);
     } catch (e, stack) {
-      developer.log('Error in click handler', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error in click handler',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       controller.add(null);
     }
   }
@@ -426,7 +425,6 @@ class WebStreamManager {
     if (hadClick) onClickListener(newView);
     if (hadVisibleGraphics) visibleGraphics(newView);
     if (hadHover) isGraphicHoveredStream(newView);
-
   }
 
   // Stream Refresh Methods (for compatibility with old architecture)
@@ -478,6 +476,5 @@ class WebStreamManager {
 
     // Clear tracking
     _initializedStreams.clear();
-
   }
 }

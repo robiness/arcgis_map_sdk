@@ -1,7 +1,7 @@
 /// ArcGIS Maps SDK for JavaScript - Graphic class
-/// 
+///
 /// Contains the Graphic class for displaying graphics on the map.
-/// 
+///
 /// @see https://developers.arcgis.com/javascript/latest/api-reference/esri-Graphic.html
 library;
 

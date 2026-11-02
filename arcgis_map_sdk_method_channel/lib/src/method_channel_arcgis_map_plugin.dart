@@ -189,7 +189,8 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
     int? threeDTilt,
   }) {
     if (scale != null) {
-      throw UnimplementedError('moveCamera(scale:) has not been implemented on mobile.');
+      throw UnimplementedError(
+          'moveCamera(scale:) has not been implemented on mobile.');
     }
     return _methodChannelBuilder(mapId).invokeMethod<bool>(
       "move_camera",
