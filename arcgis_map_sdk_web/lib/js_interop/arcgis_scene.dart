@@ -47,7 +47,8 @@ extension type JsSceneView._(JSObject _) implements JsView {
   external JSPromise<JSObject?> goTo(JSObject target, [JSObject? options]);
 
   // Hit testing and events
-  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
+  external JSPromise<JsHitTestResult> hitTest(JSObject event,
+      [JSObject? options]);
   external JsHandle on(JSAny event, JSFunction handler);
 
   // Export and screenshot

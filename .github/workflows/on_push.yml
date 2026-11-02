@@ -2,6 +2,9 @@ name: CI
 
 on: [push]
 
+# Flutter is pinned to the version the NOA app builds with: unpinned, every
+# release changes the formatter and the lints and fails code nobody touched.
+
 jobs:
   analyze:
     timeout-minutes: 10
@@ -11,6 +14,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
       - run: ./am deps
       - run: ./am analyze --fatal-warnings --fatal-infos
 
@@ -22,6 +26,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
       - run: ./am deps
       - run: ./am format --verify
 
@@ -33,5 +38,6 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.44.4'
       - run: ./am deps
       - run: ./am test

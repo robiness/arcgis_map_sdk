@@ -29,7 +29,6 @@ class ArcgisMapWebController {
     return controller;
   }
 
-
   Future<void> _initialize() async {
     await _layerController.initialize();
     await _streamManager.initialize();

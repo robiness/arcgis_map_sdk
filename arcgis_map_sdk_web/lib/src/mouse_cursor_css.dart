@@ -42,4 +42,5 @@ const Map<String, String> _cssCursorByKind = {
 };
 
 /// The CSS `cursor` value for [cursor]; unknown kinds fall back to `default`.
-String cssCursorFor(SystemMouseCursor cursor) => _cssCursorByKind[cursor.kind] ?? 'default';
+String cssCursorFor(SystemMouseCursor cursor) =>
+    _cssCursorByKind[cursor.kind] ?? 'default';

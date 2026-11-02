@@ -26,8 +26,10 @@ extension type JsView._(JSObject _) implements JSObject {
   external JSObject get padding;
   external JsHandle on(JSAny event, JSFunction callback);
   external JsHandle watch(String property, JSFunction callback);
-  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
-  external JSPromise<JSObject?> goTo(JSObject target, [JSObject? targetOptions]);
+  external JSPromise<JsHitTestResult> hitTest(JSObject event,
+      [JSObject? options]);
+  external JSPromise<JSObject?> goTo(JSObject target,
+      [JSObject? targetOptions]);
   external JSPromise<JSObject> when([JSFunction? callback]);
   external JsCollection<JsGraphic> get graphics;
   external JsPoint get center;
@@ -94,7 +96,8 @@ extension type JsMapView._(JSObject _) implements JsView {
   external JSPromise<JSObject?> goTo(JSObject target, [JSObject? options]);
 
   // Hit testing and events
-  external JSPromise<JsHitTestResult> hitTest(JSObject event, [JSObject? options]);
+  external JSPromise<JsHitTestResult> hitTest(JSObject event,
+      [JSObject? options]);
   external JsHandle on(JSAny event, JSFunction handler);
 
   // Export and screenshot
