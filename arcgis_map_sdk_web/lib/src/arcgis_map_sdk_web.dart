@@ -159,9 +159,11 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     }
 
     try {
-      await controller.addVectorTileLayer(layerId: layerId, style: style, index: index);
+      await controller.addVectorTileLayer(
+          layerId: layerId, style: style, index: index);
     } catch (e, stack) {
-      developer.log('Error adding vector tile layer $layerId', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error adding vector tile layer $layerId',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -180,13 +182,15 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     try {
       await controller.setVectorTileStyle(layerId: layerId, style: style);
     } catch (e, stack) {
-      developer.log('Error setting the style of vector tile layer $layerId', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error setting the style of vector tile layer $layerId',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
 
   @override
-  void setLayerVisibility({required int mapId, required String layerId, required bool visible}) {
+  void setLayerVisibility(
+      {required int mapId, required String layerId, required bool visible}) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -278,7 +282,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     required String urlPrefix,
     required Future<Map<String, String>> Function() headers,
   }) {
-    (_requestInterceptors ??= EsriRequestInterceptors(esriConfig['request']! as JSObject))
+    (_requestInterceptors ??=
+            EsriRequestInterceptors(esriConfig['request']! as JSObject))
         .set(urlPrefix: urlPrefix, mapId: mapId, headers: headers);
   }
 
@@ -299,14 +304,16 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
         throw Exception('Map not found for mapId: $mapId');
       }
 
-      final styleLayers = _basemapStyleLayers.putIfAbsent(mapId, BasemapStyleLayers.new);
+      final styleLayers =
+          _basemapStyleLayers.putIfAbsent(mapId, BasemapStyleLayers.new);
       await styleLayers.setVisible(
         styleLayerIds,
         visible: visible,
         layers: _currentBasemapLayers(mapId, map),
       );
     } catch (e, stack) {
-      developer.log('Error changing basemap style layers', name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      developer.log('Error changing basemap style layers',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
       rethrow;
     }
   }
@@ -371,7 +378,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _movedReferenceLayers.remove(mapId);
       _basemapStyleLayers.remove(mapId);
       _requestInterceptors?.clearMap(mapId);
-
     } catch (e, stack) {
       developer.log('Error disposing map',
           name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
@@ -1275,7 +1281,6 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       if (styleLayers != null) {
         await styleLayers.applyTo(await _currentBasemapLayers(mapId, view.map));
       }
-
     } catch (e, stack) {
       developer.log('Error changing basemap',
           name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
@@ -1523,7 +1528,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     );
   }
 
-  static Future<void> _moveReferenceLayersBeneathGraphics(int mapId, JsEsriMap map) {
+  static Future<void> _moveReferenceLayersBeneathGraphics(
+      int mapId, JsEsriMap map) {
     return moveReferenceLayersBeneathGraphics(
       map,
       _movedReferenceLayers.putIfAbsent(mapId, MovedReferenceLayersHolder.new),

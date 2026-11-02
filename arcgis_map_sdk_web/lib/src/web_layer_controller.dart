@@ -159,7 +159,8 @@ class WebLayerController {
       throw StateError('A layer with id $layerId is already in the map');
     }
 
-    final layer = JsVectorTileLayer({'id': layerId, 'style': style}.jsify()! as JSObject);
+    final layer =
+        JsVectorTileLayer({'id': layerId, 'style': style}.jsify()! as JSObject);
     map.add(layer, index);
     _layers[layerId] = layer;
 
@@ -177,7 +178,8 @@ class WebLayerController {
           _layers.remove(layerId);
           _vectorTileLoads.remove(layerId);
         }
-        throw Exception('Vector tile layer $layerId failed to load: ${_describeLoadError(e)}');
+        throw Exception(
+            'Vector tile layer $layerId failed to load: ${_describeLoadError(e)}');
       }
     }();
     _vectorTileLoads[layerId] = loading.then((_) {}, onError: (Object _) {});
@@ -210,7 +212,8 @@ class WebLayerController {
       await (layer as JsVectorTileLayer).loadStyle(jsStyle).toDart;
     } catch (e) {
       if (_isAbortError(e)) return;
-      throw Exception('Vector tile layer $layerId failed to load its style: ${_describeLoadError(e)}');
+      throw Exception(
+          'Vector tile layer $layerId failed to load its style: ${_describeLoadError(e)}');
     }
   }
 
@@ -222,7 +225,9 @@ class WebLayerController {
     required JSObject view,
   }) {
     final layer = _layerInMap((view as JsView).map, layerId) ??
-        _deferredSceneLayers.where((sceneLayer) => sceneLayer.id == layerId).firstOrNull;
+        _deferredSceneLayers
+            .where((sceneLayer) => sceneLayer.id == layerId)
+            .firstOrNull;
     layer?.visible = visible;
   }
 
@@ -237,7 +242,10 @@ class WebLayerController {
   /// or boolean reaches Dart as a Dart value, one with null or undefined as a
   /// [NullRejectionException].
   static String _describeLoadError(Object error) {
-    if (error is NullRejectionException || error is String || error is num || error is bool) {
+    if (error is NullRejectionException ||
+        error is String ||
+        error is num ||
+        error is bool) {
       return '$error';
     }
     try {
