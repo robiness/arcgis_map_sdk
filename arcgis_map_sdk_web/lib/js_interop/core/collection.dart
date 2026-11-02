@@ -9,7 +9,8 @@ import 'dart:js_interop';
 
 /// Collection type for graphics and layers
 @JS("esri.core.Collection")
-extension type JsCollection<T extends JSAny?>._(JSObject _) implements JSObject {
+extension type JsCollection<T extends JSAny?>._(JSObject _)
+    implements JSObject {
   external int get length;
   external T? getItemAt(int index);
   external int indexOf(T item);

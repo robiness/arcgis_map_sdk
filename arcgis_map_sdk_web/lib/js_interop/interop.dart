@@ -5,7 +5,6 @@
 /// organization for better maintainability and discoverability.
 library;
 
-
 // Views
 export 'arcgis_map.dart';
 export 'arcgis_scene.dart';
