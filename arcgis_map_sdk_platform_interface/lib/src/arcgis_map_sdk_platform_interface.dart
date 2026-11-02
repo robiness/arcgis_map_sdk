@@ -56,6 +56,31 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('addSceneLayer() has not been implemented.');
   }
 
+  Future<void> addVectorTileLayer({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) {
+    throw UnimplementedError('addVectorTileLayer() has not been implemented.');
+  }
+
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    throw UnimplementedError('setVectorTileStyle() has not been implemented.');
+  }
+
+  void setLayerVisibility({
+    required int mapId,
+    required String layerId,
+    required bool visible,
+  }) {
+    throw UnimplementedError('setLayerVisibility() has not been implemented.');
+  }
+
   Stream<double> getZoom(int mapId) {
     throw UnimplementedError('getZoom() has not been implemented');
   }
@@ -151,6 +176,28 @@ class ArcgisMapPlatform extends PlatformInterface {
     required double opacity,
   }) {
     throw UnimplementedError('setLayerOpacity() has not been implemented.');
+  }
+
+  void setRequestHeaders({
+    required int mapId,
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    throw UnimplementedError('setRequestHeaders() has not been implemented.');
+  }
+
+  void clearRequestHeaders({required int mapId, required String urlPrefix}) {
+    throw UnimplementedError('clearRequestHeaders() has not been implemented.');
+  }
+
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) {
+    throw UnimplementedError(
+      'setBasemapStyleLayersVisible() has not been implemented.',
+    );
   }
 
   bool destroyLayer({required int mapId, required String layerId}) {

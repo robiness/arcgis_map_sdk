@@ -8,8 +8,11 @@ import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interf
 import 'package:arcgis_map_sdk_web/assets.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
 import 'package:arcgis_map_sdk_web/src/arcgis_map_web_controller.dart';
+import 'package:arcgis_map_sdk_web/src/basemap_style_layers.dart';
+import 'package:arcgis_map_sdk_web/src/esri_request_interceptors.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
+import 'package:arcgis_map_sdk_web/src/reference_layers.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
@@ -35,8 +38,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   // Basemap labels moved beneath the graphics, with the basemap they came
   // from, so a basemap change can give them back.
-  static final Map<int, ({JsBasemap basemap, JSArray<JsLayer> layers})>
-      _movedReferenceLayers = {};
+  static final Map<int, MovedReferenceLayersHolder> _movedReferenceLayers = {};
+
+  // The style layer visibility an app set on each map's basemaps.
+  static final Map<int, BasemapStyleLayers> _basemapStyleLayers = {};
+
+  // esriConfig.request belongs to the page, so its maps share one registry.
+  static EsriRequestInterceptors? _requestInterceptors;
 
   static bool _scriptsInjected = false;
   static const _arcgisVersion = '4.33';
@@ -139,6 +147,59 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> addVectorTileLayer({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) async {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    try {
+      await controller.addVectorTileLayer(
+          layerId: layerId, style: style, index: index);
+    } catch (e, stack) {
+      developer.log('Error adding vector tile layer $layerId',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) async {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    try {
+      await controller.setVectorTileStyle(layerId: layerId, style: style);
+    } catch (e, stack) {
+      developer.log('Error setting the style of vector tile layer $layerId',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      rethrow;
+    }
+  }
+
+  @override
+  void setLayerVisibility(
+      {required int mapId, required String layerId, required bool visible}) {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    controller.setLayerVisibility(layerId: layerId, visible: visible);
+  }
+
+  @override
   void addViewPadding(int mapId, ViewPadding padding) {
     final controller = _controllers[mapId];
     if (controller == null) {
@@ -216,6 +277,48 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  void setRequestHeaders({
+    required int mapId,
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    (_requestInterceptors ??=
+            EsriRequestInterceptors(esriConfig['request']! as JSObject))
+        .set(urlPrefix: urlPrefix, mapId: mapId, headers: headers);
+  }
+
+  @override
+  void clearRequestHeaders({required int mapId, required String urlPrefix}) {
+    _requestInterceptors?.clear(urlPrefix);
+  }
+
+  @override
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) async {
+    try {
+      final map = _sharedMaps[mapId];
+      if (map == null) {
+        throw Exception('Map not found for mapId: $mapId');
+      }
+
+      final styleLayers =
+          _basemapStyleLayers.putIfAbsent(mapId, BasemapStyleLayers.new);
+      await styleLayers.setVisible(
+        styleLayerIds,
+        visible: visible,
+        layers: _currentBasemapLayers(mapId, map),
+      );
+    } catch (e, stack) {
+      developer.log('Error changing basemap style layers',
+          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
+      rethrow;
+    }
+  }
+
+  @override
   bool destroyLayer({required int mapId, required String layerId}) {
     try {
       final view =
@@ -273,6 +376,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       _mapClickControllers.remove(mapId);
       _mapOptions.remove(mapId);
       _movedReferenceLayers.remove(mapId);
+      _basemapStyleLayers.remove(mapId);
+      _requestInterceptors?.clearMap(mapId);
     } catch (e, stack) {
       developer.log('Error disposing map',
           name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
@@ -535,6 +640,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       '@arcgis/core/geometry/Point.js',
       '@arcgis/core/config.js',
       '@arcgis/core/core/reactiveUtils.js',
+      '@arcgis/core/layers/VectorTileLayer.js',
     ];
     final result = await arcgisLoader!
         .importModules(modulePaths.map((p) => p.toJS).toList().toJS)
@@ -553,6 +659,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     layers['SceneLayer'] = modules[4];
     layers['GraphicsLayer'] = modules[5];
     layers['FeatureLayer'] = modules[6];
+    layers['VectorTileLayer'] = modules[11];
     geometry['Point'] = modules[8];
     esri['views'] = views;
     esri['widgets'] = widgets;
@@ -1167,6 +1274,13 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       if (_mapOptions[mapId]?.showLabelsBeneathGraphics ?? false) {
         await _moveReferenceLayersBeneathGraphics(mapId, view.map);
       }
+
+      // The new basemap, which may be one that comes back, gets the style
+      // layer visibility set while it was not current.
+      final styleLayers = _basemapStyleLayers[mapId];
+      if (styleLayers != null) {
+        await styleLayers.applyTo(await _currentBasemapLayers(mapId, view.map));
+      }
     } catch (e, stack) {
       developer.log('Error changing basemap',
           name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
@@ -1407,36 +1521,19 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
     });
   }
 
-  /// Moves basemap reference layers (labels) into the map's operational
-  /// layers at index 0 so that graphics layers render on top of them.
-  ///
-  /// The labels moved for an earlier basemap go back to it first: they would
-  /// otherwise stay on top of the new basemap's imagery, and since a basemap
-  /// id always yields the same basemap, that one would come back without
-  /// labels.
+  static Future<List<JsLayer>> _currentBasemapLayers(int mapId, JsEsriMap map) {
+    return basemapLayers(
+      map.basemap as JsBasemap,
+      movedReferenceLayers: _movedReferenceLayers[mapId]?.current?.layers,
+    );
+  }
+
   static Future<void> _moveReferenceLayersBeneathGraphics(
-      int mapId, JsEsriMap map) async {
-    final previous = _movedReferenceLayers.remove(mapId);
-    if (previous != null) {
-      map.removeMany(previous.layers);
-      previous.basemap.referenceLayers.addMany(previous.layers);
-    }
-
-    final basemap = map.basemap as JsBasemap;
-
-    if (!basemap.loaded) {
-      await basemap.load().toDart;
-    }
-
-    final refLayers = basemap.referenceLayers;
-    final items = refLayers.toArray();
-    if (items.toDart.isEmpty) {
-      return;
-    }
-
-    map.addMany(items, 0);
-    refLayers.removeAll();
-    _movedReferenceLayers[mapId] = (basemap: basemap, layers: items);
+      int mapId, JsEsriMap map) {
+    return moveReferenceLayersBeneathGraphics(
+      map,
+      _movedReferenceLayers.putIfAbsent(mapId, MovedReferenceLayersHolder.new),
+    );
   }
 }
 

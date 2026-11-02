@@ -36,6 +36,34 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> addVectorTileLayer({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) {
+    throw UnimplementedError('addVectorTileLayer() has not been implemented.');
+  }
+
+  @override
+  Future<void> setVectorTileStyle({
+    required int mapId,
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    throw UnimplementedError('setVectorTileStyle() has not been implemented.');
+  }
+
+  @override
+  void setLayerVisibility({
+    required int mapId,
+    required String layerId,
+    required bool visible,
+  }) {
+    throw UnimplementedError('setLayerVisibility() has not been implemented.');
+  }
+
+  @override
   Future<Uint8List> exportImage(int mapId) {
     return _methodChannelBuilder(mapId)
         .invokeMethod<Uint8List>("export_image")
@@ -144,6 +172,31 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
     required double opacity,
   }) {
     throw UnimplementedError('setLayerOpacity() has not been implemented.');
+  }
+
+  @override
+  void setRequestHeaders({
+    required int mapId,
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    throw UnimplementedError('setRequestHeaders() has not been implemented.');
+  }
+
+  @override
+  void clearRequestHeaders({required int mapId, required String urlPrefix}) {
+    throw UnimplementedError('clearRequestHeaders() has not been implemented.');
+  }
+
+  @override
+  Future<void> setBasemapStyleLayersVisible({
+    required int mapId,
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) {
+    throw UnimplementedError(
+      'setBasemapStyleLayersVisible() has not been implemented.',
+    );
   }
 
   @override

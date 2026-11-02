@@ -18,6 +18,8 @@ dependencies:
     sdk: flutter
 
 dev_dependencies:
+  flutter_test:
+    sdk: flutter
   lint: ^2.8.0
 
 flutter:

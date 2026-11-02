@@ -8,6 +8,8 @@ library;
 // Views
 export 'arcgis_map.dart';
 export 'arcgis_scene.dart';
+// Configuration (esri.config)
+export 'config/request_interceptor.dart';
 export 'core/attributes.dart';
 // Core definitions (esri.core.*)
 export 'core/collection.dart';
@@ -26,6 +28,7 @@ export 'layers/js_feature_layer.dart';
 // Layers
 export 'layers/js_graphics_layer.dart';
 export 'layers/js_scene_layer.dart';
+export 'layers/js_vector_tile_layer.dart';
 // REST support (esri.rest.support.*)
 export 'rest/support/feature_set.dart';
 export 'symbols/simple_fill_symbol.dart';

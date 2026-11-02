@@ -84,6 +84,57 @@ class ArcgisMapController {
     );
   }
 
+  /// Adds a VectorTileLayer built from [style], a Mapbox GL style object.
+  /// [index] is the position in the map's operational layers (0 = bottom).
+  /// Basemap labels moved there by `showLabelsBeneathGraphics` count toward
+  /// it and are placed again after each basemap change; index 0 always lies
+  /// beneath them.
+  /// Completes once the layer has loaded (its service description and style
+  /// resolved); throws when it cannot load, and then leaves no layer behind.
+  /// Register headers for the service with [setRequestHeaders] first; the
+  /// load already requests its description. The error of a failed load names
+  /// the layer. An id already in the map throws a StateError. Web only for
+  /// now.
+  Future<void> addVectorTileLayer({
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+  }) {
+    return ArcgisMapPlatform.instance.addVectorTileLayer(
+      mapId: mapId,
+      layerId: layerId,
+      style: style,
+      index: index,
+    );
+  }
+
+  /// Replaces the whole style of a layer added by [addVectorTileLayer].
+  /// A style set while the layer still loads waits for that load. A swap
+  /// overtaken by a later one completes without error. The layer's
+  /// visibility stays as it is. Throws when the style cannot load, with an
+  /// error that names the layer, and when [layerId] names no vector tile
+  /// layer of the map. Web only for now.
+  Future<void> setVectorTileStyle({
+    required String layerId,
+    required Map<String, Object?> style,
+  }) {
+    return ArcgisMapPlatform.instance.setVectorTileStyle(
+      mapId: mapId,
+      layerId: layerId,
+      style: style,
+    );
+  }
+
+  /// Shows or hides any operational layer. An id the map does not know
+  /// changes nothing. Web only for now.
+  void setLayerVisibility({required String layerId, required bool visible}) {
+    ArcgisMapPlatform.instance.setLayerVisibility(
+      mapId: mapId,
+      layerId: layerId,
+      visible: visible,
+    );
+  }
+
   Future<void> _onCall(MethodCall call) async {
     final method = call.method;
     switch (method) {
@@ -177,6 +228,52 @@ class ArcgisMapController {
       mapId: mapId,
       layerId: layerId,
       opacity: opacity,
+    );
+  }
+
+  /// Every ArcGIS request whose URL starts with [urlPrefix] gets the headers
+  /// [headers] returns at request time. A second call for the same prefix
+  /// replaces the first. Headers apply page-wide, to the requests of every
+  /// map. [urlPrefix] must be an absolute http or https URL whose path
+  /// starts with `/`, such as `https://api.test/`. [headers] runs once per
+  /// request, so it should answer from a cache. A failing [headers] fails
+  /// that request. Web only for now.
+  void setRequestHeaders({
+    required String urlPrefix,
+    required Future<Map<String, String>> Function() headers,
+  }) {
+    ArcgisMapPlatform.instance.setRequestHeaders(
+      mapId: mapId,
+      urlPrefix: urlPrefix,
+      headers: headers,
+    );
+  }
+
+  /// Removes the headers set for [urlPrefix], whichever map set them. Web
+  /// only for now.
+  void clearRequestHeaders({required String urlPrefix}) {
+    ArcgisMapPlatform.instance.clearRequestHeaders(
+      mapId: mapId,
+      urlPrefix: urlPrefix,
+    );
+  }
+
+  /// Shows or hides the named style layers in every vector tile layer of the
+  /// current basemap, base and reference, including reference layers the SDK
+  /// moved beneath the graphics. Ids a layer lacks are skipped. The SDK keeps
+  /// the last visibility of every id it was given for the life of the map and
+  /// applies it again after every basemap change. Completes once the layers
+  /// of the current basemap have loaded and been changed. The visibility is
+  /// kept even when the call throws because the current basemap failed to
+  /// load. Web only for now.
+  Future<void> setBasemapStyleLayersVisible({
+    required List<String> styleLayerIds,
+    required bool visible,
+  }) {
+    return ArcgisMapPlatform.instance.setBasemapStyleLayersVisible(
+      mapId: mapId,
+      styleLayerIds: styleLayerIds,
+      visible: visible,
     );
   }
 

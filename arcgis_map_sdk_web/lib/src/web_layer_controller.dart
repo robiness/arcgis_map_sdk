@@ -24,6 +24,10 @@ class WebLayerController {
   // SceneLayers deferred while in 2D mode (MapView can't handle them at all)
   final List<JsSceneLayer> _deferredSceneLayers = [];
 
+  /// The load of each vector tile layer by id, completing whether or not the
+  /// layer loads.
+  final Map<String, Future<void>> _vectorTileLoads = {};
+
   Future<void> initialize() async {
     // Initialize the controller
   }
@@ -136,6 +140,132 @@ class WebLayerController {
     return SceneLayer(
       id: layerId,
     );
+  }
+
+  /// Adds a vector tile layer drawn from [style] at [index] among the map's
+  /// operational layers, on top when null, and completes once it has loaded.
+  ///
+  /// The layer joins the map both views share, so it shows in 2D and 3D. A
+  /// layer that fails to load stays in the map unless removed, so it is
+  /// removed and destroyed here, and its id can be added again.
+  Future<void> addVectorTileLayer({
+    required String layerId,
+    required Map<String, Object?> style,
+    int? index,
+    required JSObject view,
+  }) async {
+    final map = (view as JsView).map;
+    if (_layerInMap(map, layerId) != null) {
+      throw StateError('A layer with id $layerId is already in the map');
+    }
+
+    final layer =
+        JsVectorTileLayer({'id': layerId, 'style': style}.jsify()! as JSObject);
+    map.add(layer, index);
+    _layers[layerId] = layer;
+
+    // One future for the load and its cleanup, so whoever waits on the
+    // layer's _vectorTileLoads entry finds a failed layer already gone.
+    final loading = () async {
+      try {
+        await layer.load().toDart;
+      } catch (e) {
+        map.remove(layer);
+        layer.destroy();
+        // The id may already belong to a layer added after this one left
+        // the map.
+        if (identical(_layers[layerId], layer)) {
+          _layers.remove(layerId);
+          _vectorTileLoads.remove(layerId);
+        }
+        throw Exception(
+            'Vector tile layer $layerId failed to load: ${_describeLoadError(e)}');
+      }
+    }();
+    _vectorTileLoads[layerId] = loading.then((_) {}, onError: (Object _) {});
+    await loading;
+  }
+
+  /// Replaces the whole style of the vector tile layer [layerId] with
+  /// [style].
+  ///
+  /// A style set while the layer still loads waits for that load, which
+  /// `loadStyle` would otherwise abort. A swap overtaken by a later one is
+  /// rejected with an `AbortError` and completes here without error, as the
+  /// later style is the one that shows.
+  Future<void> setVectorTileStyle({
+    required String layerId,
+    required Map<String, Object?> style,
+    required JSObject view,
+  }) async {
+    final map = (view as JsView).map;
+    // Before the wait, so the style is the one given at this call, and one
+    // that cannot be converted fails at once rather than as a failed load.
+    final jsStyle = style.jsify()!;
+    await _vectorTileLoads[layerId];
+
+    final layer = _layerInMap(map, layerId);
+    if (layer == null || layer.type != 'vector-tile') {
+      throw Exception('Layer with id $layerId not found');
+    }
+    try {
+      await (layer as JsVectorTileLayer).loadStyle(jsStyle).toDart;
+    } catch (e) {
+      if (_isAbortError(e)) return;
+      throw Exception(
+          'Vector tile layer $layerId failed to load its style: ${_describeLoadError(e)}');
+    }
+  }
+
+  /// Shows or hides the layer [layerId] of the map, or a scene layer parked
+  /// while the view is 2D. An unknown id changes nothing.
+  void setLayerVisibility({
+    required String layerId,
+    required bool visible,
+    required JSObject view,
+  }) {
+    final layer = _layerInMap((view as JsView).map, layerId) ??
+        _deferredSceneLayers
+            .where((sceneLayer) => sceneLayer.id == layerId)
+            .firstOrNull;
+    layer?.visible = visible;
+  }
+
+  /// The layer [layerId] of [map], or null. Not looked up in [_layers], as
+  /// ArcgisMapWeb.destroyLayer removes layers from the map only.
+  static JsLayer? _layerInMap(JsEsriMap map, String layerId) {
+    return map.findLayerById(layerId) as JsLayer?;
+  }
+
+  /// `<name>: <message>` of the esri/core/Error ArcGIS rejects a load or a
+  /// style with, anything else as it is. A rejection with a JS string, number
+  /// or boolean reaches Dart as a Dart value, one with null or undefined as a
+  /// [NullRejectionException].
+  static String _describeLoadError(Object error) {
+    if (error is NullRejectionException ||
+        error is String ||
+        error is num ||
+        error is bool) {
+      return '$error';
+    }
+    try {
+      final arcgisError = error as JSObject;
+      return '${arcgisError['name']}: ${arcgisError['message']}';
+    } catch (_) {
+      // Neither an object nor a primitive with a Dart counterpart, such as a
+      // JS symbol.
+      return '$error';
+    }
+  }
+
+  /// Whether [error] is the esri/core/Error `loadStyle` rejects with once a
+  /// later call has taken over.
+  static bool _isAbortError(Object error) {
+    try {
+      return ((error as JSObject)['name'] as JSString?)?.toDart == 'AbortError';
+    } catch (_) {
+      return false;
+    }
   }
 
   // Graphics Management
@@ -654,6 +784,7 @@ class WebLayerController {
 
   void dispose() {
     _layers.clear();
+    _vectorTileLoads.clear();
     _graphicsInView.clear();
   }
 }

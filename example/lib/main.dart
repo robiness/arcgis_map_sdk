@@ -5,6 +5,7 @@ import 'package:arcgis_example/export_image_example_page.dart';
 import 'package:arcgis_example/location_indicator_example_page.dart';
 import 'package:arcgis_example/map_elements.dart';
 import 'package:arcgis_example/vector_layer_example_page.dart';
+import 'package:arcgis_example/vector_tile_style_example_page.dart';
 import 'package:arcgis_map_sdk/arcgis_map_sdk.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -536,6 +537,10 @@ class _ExampleMapState extends State<ExampleMap> {
                         child: const Text("Basemap example"),
                       ),
                       ElevatedButton(
+                        onPressed: _routeToVectorTileStyleExamplePage,
+                        child: const Text("Vector tile style example"),
+                      ),
+                      ElevatedButton(
                         onPressed: () {
                           _controller?.addViewPadding(
                             padding: const ViewPadding(right: 300),
@@ -786,6 +791,12 @@ class _ExampleMapState extends State<ExampleMap> {
   void _routeToBasemapStyleExamplePage() {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => BasemapStyleExamplePage()),
+    );
+  }
+
+  void _routeToVectorTileStyleExamplePage() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const VectorTileStyleExamplePage()),
     );
   }
 
