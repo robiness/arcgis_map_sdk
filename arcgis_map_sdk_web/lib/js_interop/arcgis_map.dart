@@ -33,6 +33,7 @@ extension type JsView._(JSObject _) implements JSObject {
   external JSPromise<JSObject> when([JSFunction? callback]);
   external JsCollection<JsGraphic> get graphics;
   external JsPoint get center;
+  external JsPoint? toMap(JSObject screenPoint);
   external set popup(JSObject? popup);
   external JSObject? get popup;
   external JSObject? get container;

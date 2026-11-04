@@ -453,6 +453,13 @@ class ArcgisMapWebController {
     return _streamManager.hoveredGraphicStream(view);
   }
 
+  Stream<MapPointerMove> pointerMoveStream() {
+    final view = _activeView;
+    if (view == null) return const Stream.empty();
+
+    return _streamManager.pointerMoveStream(view);
+  }
+
   List<String> getVisibleGraphicIds() {
     final view = _activeView;
     if (view == null) return [];
