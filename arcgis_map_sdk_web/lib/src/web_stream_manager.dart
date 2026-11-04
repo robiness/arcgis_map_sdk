@@ -413,14 +413,13 @@ class WebStreamManager {
     final moveHandler = (JSObject event) {
       final x = _numberOf(event, 'x');
       final y = _numberOf(event, 'y');
-      final point = view.toMap({'x': x, 'y': y}.jsify()! as JSObject);
+      final mapPoint = _mapPointAt(view, x, y);
       controller.add(MapPointerMove(
         x: x,
         y: y,
         timeStamp: _timeStampOf(event),
         buttons: _numberOf(event, 'buttons').toInt(),
-        mapPoint:
-            point == null ? null : LatLng(point.latitude, point.longitude),
+        mapPoint: mapPoint,
         overMap: true,
       ));
     }.toJS as JSFunction;
@@ -441,6 +440,22 @@ class WebStreamManager {
       ..add(view.on(['pointer-leave'.toJS].toJS, leaveHandler));
 
     _pointerMoveStreamGroup.add(controller.stream);
+  }
+
+  /// Null where the view cannot say: it throws, or the point is in a spatial
+  /// reference that has no latitude and longitude. An error here would escape
+  /// into ArcGIS's emitter and lose the move.
+  static LatLng? _mapPointAt(JsView view, double x, double y) {
+    try {
+      final point = view.toMap({'x': x, 'y': y}.jsify()! as JSObject);
+      if (point == null) return null;
+      final latitude = (point as JSObject)['latitude'].dartify();
+      final longitude = point['longitude'].dartify();
+      if (latitude is! num || longitude is! num) return null;
+      return LatLng(latitude.toDouble(), longitude.toDouble());
+    } catch (_) {
+      return null;
+    }
   }
 
   static double _numberOf(JSObject object, String name) {

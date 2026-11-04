@@ -300,6 +300,13 @@ class FakeView {
   ({double latitude, double longitude})? Function(double x, double y)
       mapPointAt = (x, y) => null;
 
+  /// Makes `toMap` throw, as it does for a view that is not ready.
+  bool toMapThrows = false;
+
+  /// Makes `toMap` return a point without `latitude` and `longitude`, as for
+  /// a spatial reference that is neither WGS 84 nor Web Mercator.
+  bool mapPointLacksCoordinates = false;
+
   /// The callbacks now attached to the event [name].
   List<JSFunction> handlersFor(String name) =>
       List.of(_handlers[name] ?? const []);
@@ -329,6 +336,10 @@ class FakeView {
     final x = (screenPoint['x']! as JSNumber).toDartDouble;
     final y = (screenPoint['y']! as JSNumber).toDartDouble;
     toMapCalls.add((x: x, y: y));
+    if (toMapThrows) throw StateError('toMap failed');
+    if (mapPointLacksCoordinates) {
+      return {'x': x, 'y': y}.jsify()! as JsPoint;
+    }
     final point = mapPointAt(x, y);
     if (point == null) return null;
     return {'latitude': point.latitude, 'longitude': point.longitude}.jsify()!

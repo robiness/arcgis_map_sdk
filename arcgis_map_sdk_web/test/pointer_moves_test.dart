@@ -95,4 +95,35 @@ void main() {
     expect(view.handlersFor('pointer-move'), isEmpty);
     expect(scene.handlersFor('pointer-move'), hasLength(1));
   });
+
+  test('a view whose toMap throws still reports the move, without a map point',
+      () async {
+    view.toMapThrows = true;
+    final moves = manager.pointerMoveStream(view.js).take(1).toList();
+    view.emit('pointer-move', pointerEvent(x: 10, y: 10));
+    expect(
+        (await moves).single,
+        const MapPointerMove(
+            x: 10,
+            y: 10,
+            timeStamp: 0,
+            buttons: 0,
+            mapPoint: null,
+            overMap: true));
+  });
+
+  test('a map point without latitude and longitude is no map point', () async {
+    view.mapPointLacksCoordinates = true;
+    final moves = manager.pointerMoveStream(view.js).take(1).toList();
+    view.emit('pointer-move', pointerEvent(x: 10, y: 10));
+    expect(
+        (await moves).single,
+        const MapPointerMove(
+            x: 10,
+            y: 10,
+            timeStamp: 0,
+            buttons: 0,
+            mapPoint: null,
+            overMap: true));
+  });
 }
