@@ -79,10 +79,13 @@ class WebLayerController {
     );
   }
 
+  /// Adds a graphics layer at [index] among the map's operational layers, on
+  /// top when null.
   Future<GraphicsLayer> addGraphicsLayer({
     required String layerId,
     required GraphicsLayerOptions options,
     void Function(dynamic)? onPressed,
+    int? index,
     required JSObject view,
   }) async {
     final map = (view as JsView).map;
@@ -98,8 +101,7 @@ class WebLayerController {
 
     final graphicsLayer = JsGraphicsLayer(layerProperties);
 
-    // Add to map
-    map.add(graphicsLayer);
+    map.add(graphicsLayer, index);
     _layers[layerId] = graphicsLayer as JSObject;
 
     return GraphicsLayer(

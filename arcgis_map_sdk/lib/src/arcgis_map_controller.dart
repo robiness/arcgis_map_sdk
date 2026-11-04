@@ -58,16 +58,23 @@ class ArcgisMapController {
     return ArcgisMapPlatform.instance.exportImage(mapId);
   }
 
+  /// Adds a GraphicsLayer at [index] in the map's operational layers
+  /// (0 = bottom), on top when null. Basemap labels moved there by
+  /// `showLabelsBeneathGraphics` count toward it, and after a basemap change
+  /// they go directly beneath the lowest graphics or feature layer. Web only
+  /// for now.
   Future<GraphicsLayer> addGraphicsLayer({
     required String layerId,
     required GraphicsLayerOptions options,
     void Function(dynamic)? onPressed,
+    int? index,
   }) {
     return ArcgisMapPlatform.instance.addGraphicsLayer(
       options,
       mapId,
       layerId,
       onPressed,
+      index: index,
     );
   }
 

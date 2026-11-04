@@ -42,8 +42,9 @@ class ArcgisMapPlatform extends PlatformInterface {
     GraphicsLayerOptions options,
     int mapId,
     String layerId,
-    void Function(dynamic)? onPressed,
-  ) {
+    void Function(dynamic)? onPressed, {
+    int? index,
+  }) {
     throw UnimplementedError('addGraphicsLayer() has not been implemented.');
   }
 

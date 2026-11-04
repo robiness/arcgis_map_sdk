@@ -106,7 +106,8 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
 
   @override
   Future<GraphicsLayer> addGraphicsLayer(GraphicsLayerOptions options,
-      int mapId, String layerId, void Function(dynamic p1)? onPressed) {
+      int mapId, String layerId, void Function(dynamic p1)? onPressed,
+      {int? index}) {
     final controller = _controllers[mapId];
     if (controller == null) {
       throw Exception('Map controller not found for mapId: $mapId');
@@ -116,6 +117,7 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       layerId: layerId,
       options: options,
       onPressed: onPressed,
+      index: index,
     );
   }
 

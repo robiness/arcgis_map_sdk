@@ -258,6 +258,37 @@ void main() {
     expect(map.layerIds, ['labels', 'markers', 'counties']);
   });
 
+  group('addGraphicsLayer', () {
+    test('adds the layer at the index', () async {
+      final constructed = installFakeGraphicsLayers();
+      final map = _mapWithLabelsAndMarkers();
+
+      final layer = await WebLayerController(mapId: 1).addGraphicsLayer(
+        layerId: 'glow',
+        options: GraphicsLayerOptions(fields: const []),
+        index: 1,
+        view: FakeView(map).js,
+      );
+
+      expect(map.layerIds, ['labels', 'glow', 'markers']);
+      expect(constructed.single.id, 'glow');
+      expect(layer.id, 'glow');
+    });
+
+    test('without an index the layer goes on top', () async {
+      installFakeGraphicsLayers();
+      final map = _mapWithLabelsAndMarkers();
+
+      await WebLayerController(mapId: 1).addGraphicsLayer(
+        layerId: 'glow',
+        options: GraphicsLayerOptions(fields: const []),
+        view: FakeView(map).js,
+      );
+
+      expect(map.layerIds, ['labels', 'markers', 'glow']);
+    });
+  });
+
   group('setVectorTileStyle', () {
     test('replaces the style of a loaded layer', () async {
       final view = FakeView(FakeMap()).js;
