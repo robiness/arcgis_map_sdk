@@ -328,6 +328,12 @@ class ArcgisMapPlatform extends PlatformInterface {
     );
   }
 
+  /// Every move of the pointer over the map, with its place on the screen and
+  /// on the map.
+  Stream<MapPointerMove> pointerMoveStream(int mapId) {
+    throw UnimplementedError('pointerMoveStream() has not been implemented.');
+  }
+
   List<String> getVisibleGraphicIds(int mapId) {
     throw UnimplementedError(
       'getVisibleGraphicIds() has not been implemented.',

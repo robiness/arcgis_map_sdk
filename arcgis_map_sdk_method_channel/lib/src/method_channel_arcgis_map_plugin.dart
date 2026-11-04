@@ -351,6 +351,11 @@ class MethodChannelArcgisMapPlugin extends ArcgisMapPlatform {
   }
 
   @override
+  Stream<MapPointerMove> pointerMoveStream(int mapId) {
+    throw UnimplementedError('pointerMoveStream() has not been implemented.');
+  }
+
+  @override
   List<String> getVisibleGraphicIds(int mapId) {
     throw UnimplementedError(
       'getVisibleGraphicIds() has not been implemented.',

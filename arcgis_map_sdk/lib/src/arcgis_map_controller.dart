@@ -464,6 +464,15 @@ class ArcgisMapController {
     return ArcgisMapPlatform.instance.hoveredGraphicStream(mapId);
   }
 
+  /// Every move of the pointer over the map: where it is on the screen, which
+  /// buttons are pressed and the map point under it.
+  ///
+  /// Emits on every pointer move, so a consumer should throttle if it does
+  /// more than cheap work per event. Web only for now.
+  Stream<MapPointerMove> pointerMoveStream() {
+    return ArcgisMapPlatform.instance.pointerMoveStream(mapId);
+  }
+
   List<String> getVisibleGraphicIds() {
     return ArcgisMapPlatform.instance.getVisibleGraphicIds(mapId);
   }
