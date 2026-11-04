@@ -55,6 +55,20 @@ void main() {
     expect(identical(platform.vectorTileStyle, style), isTrue);
   });
 
+  test('a graphics layer reaches the platform with the map id and its index',
+      () async {
+    await controller.addGraphicsLayer(
+      layerId: 'glow',
+      options: GraphicsLayerOptions(fields: const []),
+      index: 1,
+    );
+
+    expect(
+      platform.graphicsLayerCalls,
+      [(mapId: 7, layerId: 'glow', index: 1)],
+    );
+  });
+
   test('style and visibility reach the platform with the map id', () async {
     final style = <String, Object?>{'version': 8, 'layers': <Object?>[]};
 
@@ -103,6 +117,8 @@ class _RecordingPlatform extends ArcgisMapPlatform {
 
   final vectorTileLayerCalls = <({int mapId, String layerId, int? index})>[];
 
+  final graphicsLayerCalls = <({int mapId, String layerId, int? index})>[];
+
   Map<String, Object?>? vectorTileStyle;
 
   Future<Map<String, String>> Function()? requestHeaders;
@@ -138,6 +154,18 @@ class _RecordingPlatform extends ArcgisMapPlatform {
     required bool visible,
   }) async {
     styleLayerCalls.add((mapId: mapId, ids: styleLayerIds, visible: visible));
+  }
+
+  @override
+  Future<GraphicsLayer> addGraphicsLayer(
+    GraphicsLayerOptions options,
+    int mapId,
+    String layerId,
+    void Function(dynamic)? onPressed, {
+    int? index,
+  }) async {
+    graphicsLayerCalls.add((mapId: mapId, layerId: layerId, index: index));
+    return GraphicsLayer(id: layerId);
   }
 
   @override

@@ -393,6 +393,20 @@ List<FakeVectorTileLayer> installFakeVectorTileLayers() {
   return constructed;
 }
 
+/// Puts a fake `esri.layers.GraphicsLayer` constructor on the page for the
+/// rest of the test. The layers it constructs join the returned list.
+List<FakeLayer> installFakeGraphicsLayers() {
+  final constructed = <FakeLayer>[];
+  JsLayer construct(JSObject properties) {
+    final layer = FakeLayer(id: (properties['id']! as JSString).toDart);
+    constructed.add(layer);
+    return layer.js;
+  }
+
+  _installLayerConstructor('GraphicsLayer', construct.toJS);
+  return constructed;
+}
+
 /// Puts a fake `esri.layers.SceneLayer` constructor on the page for the rest
 /// of the test. The layers it constructs join the returned list.
 List<FakeLayer> installFakeSceneLayers() {

@@ -61,6 +61,7 @@ class ArcgisMapWebController {
     required String layerId,
     required GraphicsLayerOptions options,
     void Function(dynamic)? onPressed,
+    int? index,
   }) {
     final view = _activeView;
     if (view == null) throw Exception('Map view not initialized');
@@ -69,6 +70,7 @@ class ArcgisMapWebController {
       layerId: layerId,
       options: options,
       onPressed: onPressed,
+      index: index,
       view: view,
     );
   }
