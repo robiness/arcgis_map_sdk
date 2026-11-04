@@ -126,4 +126,27 @@ void main() {
             mapPoint: null,
             overMap: true));
   });
+
+  test('a view nobody listens to any more is not asked for map points',
+      () async {
+    final subscription = manager.pointerMoveStream(view.js).listen((_) {});
+    view.emit('pointer-move', pointerEvent(x: 1, y: 1));
+    await subscription.cancel();
+    final before = view.toMapCalls.length;
+
+    view
+      ..emit('pointer-move', pointerEvent(x: 2, y: 2))
+      ..emit('pointer-leave', pointerEvent(x: 3, y: 3));
+
+    expect(before, 1);
+    expect(view.toMapCalls, hasLength(before));
+  });
+
+  test('disposing the manager takes the handlers off the view', () {
+    manager.pointerMoveStream(view.js).listen((_) {});
+    manager.dispose();
+
+    expect(view.handlersFor('pointer-move'), isEmpty);
+    expect(view.handlersFor('pointer-leave'), isEmpty);
+  });
 }

@@ -1,6 +1,11 @@
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 
 /// A move of the pointer over the map view.
+///
+/// The pointer is not over the map ([overMap] is false) in the one move the
+/// view reports when the pointer leaves its surface. While a button is held,
+/// the view keeps the pointer, so moves go on with [overMap] true, also at
+/// positions outside the view, until the button is released.
 class MapPointerMove {
   const MapPointerMove({
     required this.x,
@@ -27,8 +32,11 @@ class MapPointerMove {
   /// of a 3D view) and on a leave.
   final LatLng? mapPoint;
 
-  /// False only when the pointer has left the map, onto the app's own
-  /// controls.
+  /// False for the move the view reports when the pointer leaves its surface:
+  /// onto an element above the map (such as a pointer interceptor over a
+  /// control), onto the view's own UI widgets, or out of the page. A Flutter
+  /// widget painted over the map without an element of its own produces no
+  /// such move.
   final bool overMap;
 
   @override

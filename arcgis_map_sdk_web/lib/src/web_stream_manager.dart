@@ -404,13 +404,19 @@ class WebStreamManager {
   }
 
   /// The view's own events, not the DOM's: only the view knows the map point
-  /// under a position, with padding and rotation accounted for. Over the app's
-  /// controls the view gets no moves, but a `pointer-leave` when the pointer
-  /// goes onto them, which is the move that is not over the map.
+  /// under a position, with padding and rotation accounted for. The move that
+  /// is not over the map is the `pointer-leave` the view reports when the
+  /// pointer leaves its surface: onto an element above the map, onto the
+  /// view's own UI widgets, or out of the page. While a button is held the
+  /// view keeps the pointer, so moves go on, over the map, outside the view.
+  ///
+  /// The handlers return early without a listener: the conversion to a map
+  /// point is not free and a move comes at pointer rate.
   void _setupPointerMoveStream(JsView view) {
     final controller = StreamController<MapPointerMove>.broadcast();
 
     final moveHandler = (JSObject event) {
+      if (!controller.hasListener) return;
       final x = _numberOf(event, 'x');
       final y = _numberOf(event, 'y');
       final mapPoint = _mapPointAt(view, x, y);
@@ -425,6 +431,7 @@ class WebStreamManager {
     }.toJS as JSFunction;
 
     final leaveHandler = (JSObject event) {
+      if (!controller.hasListener) return;
       controller.add(MapPointerMove(
         x: _numberOf(event, 'x'),
         y: _numberOf(event, 'y'),
@@ -449,7 +456,7 @@ class WebStreamManager {
     try {
       final point = view.toMap({'x': x, 'y': y}.jsify()! as JSObject);
       if (point == null) return null;
-      final latitude = (point as JSObject)['latitude'].dartify();
+      final latitude = point['latitude'].dartify();
       final longitude = point['longitude'].dartify();
       if (latitude is! num || longitude is! num) return null;
       return LatLng(latitude.toDouble(), longitude.toDouble());
@@ -465,7 +472,7 @@ class WebStreamManager {
 
   static double _timeStampOf(JSObject event) {
     final native = event['native'];
-    return native == null || native.typeofEquals('object') == false
+    return native == null || !native.typeofEquals('object')
         ? 0
         : _numberOf(native as JSObject, 'timeStamp');
   }

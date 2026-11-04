@@ -468,7 +468,9 @@ class ArcgisMapController {
   /// buttons are pressed and the map point under it.
   ///
   /// Emits on every pointer move, so a consumer should throttle if it does
-  /// more than cheap work per event. Web only for now.
+  /// more than cheap work per event. [MapPointerMove.overMap] is false for the
+  /// move the view reports when the pointer leaves its surface, and while a
+  /// button is held the moves go on outside the view. Web only for now.
   Stream<MapPointerMove> pointerMoveStream() {
     return ArcgisMapPlatform.instance.pointerMoveStream(mapId);
   }
