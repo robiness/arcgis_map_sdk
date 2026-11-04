@@ -711,6 +711,16 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Stream<MapPointerMove> pointerMoveStream(int mapId) {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    return controller.pointerMoveStream();
+  }
+
+  @override
   Future<void> moveCamera(
       {required LatLng point,
       required int mapId,

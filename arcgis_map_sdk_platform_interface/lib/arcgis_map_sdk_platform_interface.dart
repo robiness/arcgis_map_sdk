@@ -16,6 +16,7 @@ export 'package:arcgis_map_sdk_platform_interface/src/types/feature_reduction_cl
 export 'package:arcgis_map_sdk_platform_interface/src/types/field.dart';
 export 'package:arcgis_map_sdk_platform_interface/src/types/graphic.dart';
 export 'package:arcgis_map_sdk_platform_interface/src/types/graphics_layer.dart';
+export 'package:arcgis_map_sdk_platform_interface/src/types/map_pointer_move.dart';
 export 'package:arcgis_map_sdk_platform_interface/src/types/scene_layer.dart';
 export 'package:arcgis_map_sdk_platform_interface/src/types/symbol.dart';
 export 'package:latlong2/latlong.dart';

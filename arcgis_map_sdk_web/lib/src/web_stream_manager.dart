@@ -25,6 +25,8 @@ class WebStreamManager {
   final StreamGroup<bool> _graphicHoveredStreamGroup = StreamGroup.broadcast();
   final StreamGroup<Attributes?> _hoveredGraphicStreamGroup =
       StreamGroup.broadcast();
+  final StreamGroup<MapPointerMove> _pointerMoveStreamGroup =
+      StreamGroup.broadcast();
 
   // Event handles for cleanup
   final List<JsHandle> _eventHandles = [];
@@ -389,6 +391,92 @@ class WebStreamManager {
     return Attributes(Map<String, dynamic>.from(data));
   }
 
+  // Pointer Move Stream Management
+  Stream<MapPointerMove> pointerMoveStream(JsView view) {
+    final streamKey = 'pointer_${view.hashCode}';
+
+    if (!_initializedStreams.contains(streamKey)) {
+      _setupPointerMoveStream(view);
+      _initializedStreams.add(streamKey);
+    }
+
+    return _pointerMoveStreamGroup.stream;
+  }
+
+  /// The view's own events, not the DOM's: only the view knows the map point
+  /// under a position, with padding and rotation accounted for. The move that
+  /// is not over the map is the `pointer-leave` the view reports when the
+  /// pointer leaves its surface: onto an element above the map, onto the
+  /// view's own UI widgets, or out of the page. While a button is held the
+  /// view keeps the pointer, so moves go on, over the map, outside the view.
+  ///
+  /// The handlers return early without a listener: the conversion to a map
+  /// point is not free and a move comes at pointer rate.
+  void _setupPointerMoveStream(JsView view) {
+    final controller = StreamController<MapPointerMove>.broadcast();
+
+    final moveHandler = (JSObject event) {
+      if (!controller.hasListener) return;
+      final x = _numberOf(event, 'x');
+      final y = _numberOf(event, 'y');
+      final mapPoint = _mapPointAt(view, x, y);
+      controller.add(MapPointerMove(
+        x: x,
+        y: y,
+        timeStamp: _timeStampOf(event),
+        buttons: _numberOf(event, 'buttons').toInt(),
+        mapPoint: mapPoint,
+        overMap: true,
+      ));
+    }.toJS as JSFunction;
+
+    final leaveHandler = (JSObject event) {
+      if (!controller.hasListener) return;
+      controller.add(MapPointerMove(
+        x: _numberOf(event, 'x'),
+        y: _numberOf(event, 'y'),
+        timeStamp: _timeStampOf(event),
+        buttons: _numberOf(event, 'buttons').toInt(),
+        mapPoint: null,
+        overMap: false,
+      ));
+    }.toJS as JSFunction;
+
+    _eventHandles
+      ..add(view.on(['pointer-move'.toJS].toJS, moveHandler))
+      ..add(view.on(['pointer-leave'.toJS].toJS, leaveHandler));
+
+    _pointerMoveStreamGroup.add(controller.stream);
+  }
+
+  /// Null where the view cannot say: it throws, or the point is in a spatial
+  /// reference that has no latitude and longitude. An error here would escape
+  /// into ArcGIS's emitter and lose the move.
+  static LatLng? _mapPointAt(JsView view, double x, double y) {
+    try {
+      final point = view.toMap({'x': x, 'y': y}.jsify()! as JSObject);
+      if (point == null) return null;
+      final latitude = point['latitude'].dartify();
+      final longitude = point['longitude'].dartify();
+      if (latitude is! num || longitude is! num) return null;
+      return LatLng(latitude.toDouble(), longitude.toDouble());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static double _numberOf(JSObject object, String name) {
+    final value = object[name].dartify();
+    return value is num ? value.toDouble() : 0;
+  }
+
+  static double _timeStampOf(JSObject event) {
+    final native = event['native'];
+    return native == null || !native.typeofEquals('object')
+        ? 0
+        : _numberOf(native as JSObject, 'timeStamp');
+  }
+
   // View Switch Management
   void switchView(JsView newView) {
     // Snapshot which stream types were active on the old view before we wipe
@@ -406,6 +494,7 @@ class WebStreamManager {
     final hadVisibleGraphics =
         _initializedStreams.any((k) => k.startsWith('visible_graphics_'));
     final hadHover = _initializedStreams.any((k) => k.startsWith('hover_'));
+    final hadPointer = _initializedStreams.any((k) => k.startsWith('pointer_'));
 
     _initializedStreams.clear();
 
@@ -425,6 +514,7 @@ class WebStreamManager {
     if (hadClick) onClickListener(newView);
     if (hadVisibleGraphics) visibleGraphics(newView);
     if (hadHover) isGraphicHoveredStream(newView);
+    if (hadPointer) pointerMoveStream(newView);
   }
 
   // Stream Refresh Methods (for compatibility with old architecture)
@@ -464,6 +554,7 @@ class WebStreamManager {
     _visibleGraphicsStreamGroup.close();
     _graphicHoveredStreamGroup.close();
     _hoveredGraphicStreamGroup.close();
+    _pointerMoveStreamGroup.close();
 
     // Close direct controllers
     _graphicHoveredController.close();

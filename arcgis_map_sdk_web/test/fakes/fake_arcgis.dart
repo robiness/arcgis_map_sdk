@@ -290,6 +290,87 @@ class FakeView {
   late final JsView js = createJSInteropWrapper(this) as JsView;
 
   JsEsriMap get map => _map.js;
+
+  final Map<String, List<JSFunction>> _handlers = {};
+
+  /// Every `toMap` call, in order.
+  final List<({double x, double y})> toMapCalls = [];
+
+  /// Where the map is under a screen point, or null where there is none.
+  ({double latitude, double longitude})? Function(double x, double y)
+      mapPointAt = (x, y) => null;
+
+  /// Makes `toMap` throw, as it does for a view that is not ready.
+  bool toMapThrows = false;
+
+  /// Makes `toMap` return a point without `latitude` and `longitude`, as for
+  /// a spatial reference that is neither WGS 84 nor Web Mercator.
+  bool mapPointLacksCoordinates = false;
+
+  /// The callbacks now attached to the event [name].
+  List<JSFunction> handlersFor(String name) =>
+      List.of(_handlers[name] ?? const []);
+
+  /// Calls the callbacks attached to [name] with [event].
+  void emit(String name, JSObject event) {
+    for (final callback in handlersFor(name)) {
+      callback.callAsFunction(null, event);
+    }
+  }
+
+  JsHandle on(JSAny events, JSFunction callback) {
+    final names = [
+      for (final name in (events as JSArray<JSString>).toDart) name.toDart,
+    ];
+    for (final name in names) {
+      (_handlers[name] ??= []).add(callback);
+    }
+    return _FakeHandle(() {
+      for (final name in names) {
+        _handlers[name]?.remove(callback);
+      }
+    }).js;
+  }
+
+  JsPoint? toMap(JSObject screenPoint) {
+    final x = (screenPoint['x']! as JSNumber).toDartDouble;
+    final y = (screenPoint['y']! as JSNumber).toDartDouble;
+    toMapCalls.add((x: x, y: y));
+    if (toMapThrows) throw StateError('toMap failed');
+    if (mapPointLacksCoordinates) {
+      return {'x': x, 'y': y}.jsify()! as JsPoint;
+    }
+    final point = mapPointAt(x, y);
+    if (point == null) return null;
+    return {'latitude': point.latitude, 'longitude': point.longitude}.jsify()!
+        as JsPoint;
+  }
+}
+
+@JSExport()
+class _FakeHandle {
+  _FakeHandle(this._onRemove);
+
+  final void Function() _onRemove;
+
+  late final JsHandle js = createJSInteropWrapper(this) as JsHandle;
+
+  void remove() => _onRemove();
+}
+
+/// An ArcGIS pointer event: `{x, y, buttons, native: {timeStamp}}`.
+JSObject pointerEvent({
+  required double x,
+  required double y,
+  int buttons = 0,
+  double timeStamp = 0,
+}) {
+  return {
+    'x': x,
+    'y': y,
+    'buttons': buttons,
+    'native': {'timeStamp': timeStamp},
+  }.jsify()! as JSObject;
 }
 
 /// Puts a fake `esri.layers.VectorTileLayer` constructor on the page for the

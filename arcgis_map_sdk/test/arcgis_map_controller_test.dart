@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:arcgis_map_sdk/arcgis_map_sdk.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,9 +67,36 @@ void main() {
     ]);
     expect(identical(platform.vectorTileStyle, style), isTrue);
   });
+
+  test("the pointer moves are the platform's for the map id", () async {
+    const move = MapPointerMove(
+      x: 120,
+      y: 80,
+      timeStamp: 1234.5,
+      buttons: 0,
+      mapPoint: LatLng(53.35, -6.26),
+      overMap: true,
+    );
+    final moves = controller.pointerMoveStream().toList();
+    platform.pointerMoves.add(move);
+    await platform.pointerMoves.close();
+
+    expect(await moves, [move]);
+    expect(platform.pointerMoveMapIds, [7]);
+  });
 }
 
 class _RecordingPlatform extends ArcgisMapPlatform {
+  final pointerMoves = StreamController<MapPointerMove>.broadcast();
+
+  final pointerMoveMapIds = <int>[];
+
+  @override
+  Stream<MapPointerMove> pointerMoveStream(int mapId) {
+    pointerMoveMapIds.add(mapId);
+    return pointerMoves.stream;
+  }
+
   final calls = <(String method, int mapId, Object? argument)>[];
 
   final styleLayerCalls = <({int mapId, List<String> ids, bool visible})>[];
