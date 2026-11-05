@@ -105,6 +105,17 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   }
 
   @override
+  Future<void> addGraphics(
+      int mapId, String layerId, Iterable<Graphic> graphics) {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    return controller.addGraphics(layerId: layerId, graphics: graphics);
+  }
+
+  @override
   Future<GraphicsLayer> addGraphicsLayer(GraphicsLayerOptions options,
       int mapId, String layerId, void Function(dynamic p1)? onPressed,
       {int? index}) {
@@ -852,33 +863,23 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
   @override
   Future<void> removeGraphic(
       int mapId, String layerId, String graphicId) async {
-    try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
-
-      // Find the graphics layer
-      final layer = view.map.findLayerById(layerId) as JsGraphicsLayer?;
-      if (layer == null) {
-        throw Exception('Graphics layer with id $layerId not found');
-      }
-
-      // Find and remove the graphic using direct API calls
-      final items = layer.graphics['items'] as JSArray?;
-      if (items != null) {
-        for (int i = 0; i < items.toDart.length; i++) {
-          final graphic = items.toDart[i]! as JSObject;
-          final attributes = graphic['attributes'] as JSObject?;
-          if (attributes != null && attributes['id'] == graphicId.toJS) {
-            layer.remove(graphic as JsGraphic);
-            break;
-          }
-        }
-      }
-    } catch (e, stack) {
-      developer.log('Error removing graphic',
-          name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);
-      rethrow;
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
     }
+
+    await controller.removeGraphic(layerId: layerId, objectId: graphicId);
+  }
+
+  @override
+  Future<void> removeGraphicsById(
+      int mapId, String layerId, Iterable<String> graphicIds) async {
+    final controller = _controllers[mapId];
+    if (controller == null) {
+      throw Exception('Map controller not found for mapId: $mapId');
+    }
+
+    controller.removeGraphicsById(layerId: layerId, graphicIds: graphicIds);
   }
 
   @override
@@ -890,114 +891,18 @@ class ArcgisMapWeb extends ArcgisMapPlatform {
       String? excludeAttributeKey,
       List<String>? excludeAttributeValues}) {
     try {
-      final view =
-          _isSceneViewActive[mapId]! ? _sceneViews[mapId]! : _mapViews[mapId]!;
-
-      if (layerId != null) {
-        // Remove graphics from specific layer
-        final layer = view.map.findLayerById(layerId) as JsGraphicsLayer?;
-        if (layer == null) return;
-
-        // Remove graphics using direct API calls with filtering logic
-        final items = layer.graphics['items'] as JSArray?;
-        if (items != null) {
-          final graphicsToRemove = <JsGraphic>[];
-          for (int i = 0; i < items.toDart.length; i++) {
-            final graphic = items.toDart[i]! as JSObject;
-            final attributes = graphic['attributes'] as JSObject?;
-            if (attributes != null) {
-              bool shouldRemove = true;
-
-              // Check remove criteria
-              if (removeByAttributeKey != null &&
-                  removeByAttributeValue != null) {
-                if (attributes[removeByAttributeKey] !=
-                    removeByAttributeValue.toJS) {
-                  shouldRemove = false;
-                }
-              }
-
-              // Check exclude criteria
-              if (excludeAttributeKey != null &&
-                  excludeAttributeValues != null) {
-                final attrValue = attributes[excludeAttributeKey];
-                for (final excludeValue in excludeAttributeValues) {
-                  if (attrValue == excludeValue.toJS) {
-                    shouldRemove = false;
-                    break;
-                  }
-                }
-              }
-
-              if (shouldRemove) {
-                graphicsToRemove.add(graphic as JsGraphic);
-              }
-            }
-          }
-
-          // Remove all matching graphics
-          for (final graphic in graphicsToRemove) {
-            layer.remove(graphic);
-          }
-        }
-      } else {
-        // Remove from all graphics layers using direct API calls
-        final layerItems = view.map.layers['items'] as JSArray?;
-
-        if (layerItems != null) {
-          for (int layerIndex = 0;
-              layerIndex < layerItems.toDart.length;
-              layerIndex++) {
-            final layer = layerItems.toDart[layerIndex]! as JSObject;
-            final layerType = layer['type'] as JSString?;
-
-            if (layerType?.toDart == 'graphics') {
-              final enhancedLayer = layer as JsGraphicsLayer;
-              final items = enhancedLayer.graphics['items'] as JSArray?;
-              if (items != null) {
-                final graphicsToRemove = <JsGraphic>[];
-                for (int i = 0; i < items.toDart.length; i++) {
-                  final graphic = items.toDart[i]! as JSObject;
-                  final attributes = graphic['attributes'] as JSObject?;
-                  if (attributes != null) {
-                    bool shouldRemove = true;
-
-                    // Check remove criteria
-                    if (removeByAttributeKey != null &&
-                        removeByAttributeValue != null) {
-                      if (attributes[removeByAttributeKey] !=
-                          removeByAttributeValue.toJS) {
-                        shouldRemove = false;
-                      }
-                    }
-
-                    // Check exclude criteria
-                    if (excludeAttributeKey != null &&
-                        excludeAttributeValues != null) {
-                      final attrValue = attributes[excludeAttributeKey];
-                      for (final excludeValue in excludeAttributeValues) {
-                        if (attrValue == excludeValue.toJS) {
-                          shouldRemove = false;
-                          break;
-                        }
-                      }
-                    }
-
-                    if (shouldRemove) {
-                      graphicsToRemove.add(graphic as JsGraphic);
-                    }
-                  }
-                }
-
-                // Remove all matching graphics
-                for (final graphic in graphicsToRemove) {
-                  enhancedLayer.remove(graphic);
-                }
-              }
-            }
-          }
-        }
+      final controller = _controllers[mapId];
+      if (controller == null) {
+        throw Exception('Map controller not found for mapId: $mapId');
       }
+
+      controller.removeGraphics(
+        layerId: layerId,
+        removeByAttributeKey: removeByAttributeKey,
+        removeByAttributeValue: removeByAttributeValue,
+        excludeAttributeKey: excludeAttributeKey,
+        excludeAttributeValues: excludeAttributeValues,
+      );
     } catch (e, stack) {
       developer.log('Error removing graphics',
           name: 'arcgis_map_sdk_web', error: e, stackTrace: stack, level: 1000);

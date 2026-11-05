@@ -203,6 +203,20 @@ class ArcgisMapWebController {
     );
   }
 
+  Future<void> addGraphics({
+    required String layerId,
+    required Iterable<Graphic> graphics,
+  }) {
+    final view = _activeView;
+    if (view == null) throw Exception('Map view not initialized');
+
+    return _layerController.addGraphics(
+      layerId: layerId,
+      graphics: graphics,
+      view: view,
+    );
+  }
+
   Future<void> removeGraphic({
     required String layerId,
     required String objectId,
@@ -213,6 +227,20 @@ class ArcgisMapWebController {
     return _layerController.removeGraphic(
       layerId: layerId,
       objectId: objectId,
+      view: view,
+    );
+  }
+
+  void removeGraphicsById({
+    required String layerId,
+    required Iterable<String> graphicIds,
+  }) {
+    final view = _activeView;
+    if (view == null) throw Exception('Map view not initialized');
+
+    _layerController.removeGraphicsById(
+      layerId: layerId,
+      graphicIds: graphicIds,
       view: view,
     );
   }
@@ -434,13 +462,6 @@ class ArcgisMapWebController {
   // Note: Status management removed for web implementation simplicity
   // Can be added later if needed
 
-  List<Graphic> getGraphicsInView() {
-    final view = _activeView;
-    if (view == null) return [];
-
-    return _layerController.getGraphicsInView(view);
-  }
-
   Stream<bool> isGraphicHoveredStream() {
     final view = _activeView;
     if (view == null) return Stream.value(false);
@@ -460,13 +481,6 @@ class ArcgisMapWebController {
     if (view == null) return const Stream.empty();
 
     return _streamManager.pointerMoveStream(view);
-  }
-
-  List<String> getVisibleGraphicIds() {
-    final view = _activeView;
-    if (view == null) return [];
-
-    return _layerController.getVisibleGraphicIds(view);
   }
 
   Future<void> updateIsAttributionTextVisible(bool isAttributionTextVisible) {

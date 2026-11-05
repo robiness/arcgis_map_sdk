@@ -395,11 +395,35 @@ class ArcgisMapController {
     return ArcgisMapPlatform.instance.addGraphic(mapId, layerId, graphic);
   }
 
+  /// Adds [graphics] to the layer [layerId], in their order.
+  ///
+  /// On web they join the layer in one call. Elsewhere each is added on its
+  /// own.
+  Future<void> addGraphics({
+    required String layerId,
+    required Iterable<Graphic> graphics,
+  }) {
+    return ArcgisMapPlatform.instance.addGraphics(mapId, layerId, graphics);
+  }
+
   Future<void> removeGraphic({
     required String layerId,
     required String objectId,
   }) {
     return ArcgisMapPlatform.instance.removeGraphic(mapId, layerId, objectId);
+  }
+
+  /// Removes from the layer [layerId] the graphics with [graphicIds]. Ids the
+  /// layer lacks are skipped.
+  ///
+  /// On web they leave the layer in one call, where ArcGIS goes through the
+  /// layer for each [removeGraphic]. Elsewhere each is removed on its own.
+  Future<void> removeGraphicsById({
+    required String layerId,
+    required Iterable<String> graphicIds,
+  }) {
+    return ArcgisMapPlatform.instance
+        .removeGraphicsById(mapId, layerId, graphicIds);
   }
 
   /// Removes the [Graphic]s from a specific [GraphicsLayer], given their [removeByAttributeKey] with an [removeByAttributeValue].

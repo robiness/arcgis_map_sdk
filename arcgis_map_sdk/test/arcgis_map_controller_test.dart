@@ -69,6 +69,19 @@ void main() {
     );
   });
 
+  test('graphics reach the platform in one call with the map id', () async {
+    final graphics = [_graphic('a'), _graphic('b')];
+    final ids = ['b'];
+
+    await controller.addGraphics(layerId: 'pins', graphics: graphics);
+    await controller.removeGraphicsById(layerId: 'pins', graphicIds: ids);
+
+    expect(platform.calls, [
+      ('addGraphics', 7, ('pins', graphics)),
+      ('removeGraphicsById', 7, ('pins', ids)),
+    ]);
+  });
+
   test('style and visibility reach the platform with the map id', () async {
     final style = <String, Object?>{'version': 8, 'layers': <Object?>[]};
 
@@ -99,6 +112,16 @@ void main() {
     expect(platform.pointerMoveMapIds, [7]);
   });
 }
+
+PointGraphic _graphic(String id) => PointGraphic(
+      latitude: 53.35,
+      longitude: -6.26,
+      attributes: Attributes({'id': id}),
+      symbol: const SimpleMarkerSymbol(
+        color: Color(0xFFE60000),
+        outlineColor: Color(0xFFFFFFFF),
+      ),
+    );
 
 class _RecordingPlatform extends ArcgisMapPlatform {
   final pointerMoves = StreamController<MapPointerMove>.broadcast();
@@ -154,6 +177,24 @@ class _RecordingPlatform extends ArcgisMapPlatform {
     required bool visible,
   }) async {
     styleLayerCalls.add((mapId: mapId, ids: styleLayerIds, visible: visible));
+  }
+
+  @override
+  Future<void> addGraphics(
+    int mapId,
+    String layerId,
+    Iterable<Graphic> graphics,
+  ) async {
+    calls.add(('addGraphics', mapId, (layerId, graphics)));
+  }
+
+  @override
+  Future<void> removeGraphicsById(
+    int mapId,
+    String layerId,
+    Iterable<String> graphicIds,
+  ) async {
+    calls.add(('removeGraphicsById', mapId, (layerId, graphicIds)));
   }
 
   @override

@@ -288,8 +288,37 @@ class ArcgisMapPlatform extends PlatformInterface {
     throw UnimplementedError('addGraphic() has not been implemented.');
   }
 
+  /// Adds [graphics] to the layer [layerId], in their order.
+  ///
+  /// A platform that can add them in one call overrides this; otherwise each
+  /// goes through [addGraphic].
+  Future<void> addGraphics(
+    int mapId,
+    String layerId,
+    Iterable<Graphic> graphics,
+  ) async {
+    for (final graphic in graphics) {
+      await addGraphic(mapId, layerId, graphic);
+    }
+  }
+
   Future<void> removeGraphic(int mapId, String layerId, String graphicId) {
     throw UnimplementedError('removeGraphic() has not been implemented.');
+  }
+
+  /// Removes from the layer [layerId] the graphics with [graphicIds]. Ids the
+  /// layer lacks are skipped.
+  ///
+  /// A platform that can remove them in one call overrides this; otherwise
+  /// each goes through [removeGraphic].
+  Future<void> removeGraphicsById(
+    int mapId,
+    String layerId,
+    Iterable<String> graphicIds,
+  ) async {
+    for (final graphicId in graphicIds) {
+      await removeGraphic(mapId, layerId, graphicId);
+    }
   }
 
   void removeGraphics({

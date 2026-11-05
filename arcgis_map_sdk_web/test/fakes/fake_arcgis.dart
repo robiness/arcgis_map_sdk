@@ -37,6 +37,108 @@ class FakeLayer {
   }
 }
 
+/// A graphics layer that, like ArcGIS, sets the `layer` of each graphic it
+/// takes and clears it when the graphic leaves.
+@JSExport()
+class FakeGraphicsLayer extends FakeLayer {
+  FakeGraphicsLayer({required super.id});
+
+  final List<JsGraphic> _graphics = [];
+
+  late final FakeGraphicCollection _collection = FakeGraphicCollection(this);
+
+  /// The name of every call that adds or removes graphics, in order.
+  final List<String> calls = [];
+
+  @override
+  JsLayer _wrap() {
+    return createJSInteropWrapper<FakeGraphicsLayer>(this) as JsLayer;
+  }
+
+  /// The `id` in the attributes of each graphic, in the layer's order.
+  List<String?> get graphicIds => [
+        for (final graphic in _graphics)
+          (graphic.attributes?['id'] as JSString?)?.toDart,
+      ];
+
+  /// How often the graphics were gone through.
+  int get toArrayCount => _collection.toArrayCount;
+
+  JsCollection<JsGraphic> get graphics => _collection.js;
+
+  void add(JsGraphic graphic) {
+    calls.add('add');
+    _take(graphic);
+  }
+
+  void addMany(JSArray<JsGraphic> graphics) {
+    calls.add('addMany');
+    graphics.toDart.forEach(_take);
+  }
+
+  JsGraphic? remove(JsGraphic graphic) {
+    calls.add('remove');
+    return _release(graphic);
+  }
+
+  JSArray<JsGraphic> removeMany(JSArray<JsGraphic> graphics) {
+    calls.add('removeMany');
+    return [
+      for (final graphic in graphics.toDart)
+        if (_release(graphic) case final removed?) removed,
+    ].toJS;
+  }
+
+  void removeAll() {
+    calls.add('removeAll');
+    [..._graphics].forEach(_release);
+  }
+
+  /// Puts [graphic] into the layer as code would that reaches the layer
+  /// directly.
+  void addDirectly(JsGraphic graphic) => _take(graphic);
+
+  /// Takes the graphic [id] out of the layer as code would that reaches the
+  /// layer directly.
+  void removeDirectly(String id) {
+    _release(_graphics[graphicIds.indexOf(id)]);
+  }
+
+  void _take(JsGraphic graphic) {
+    _graphics.add(graphic);
+    graphic['layer'] = js;
+  }
+
+  JsGraphic? _release(JsGraphic graphic) {
+    final index =
+        _graphics.indexWhere((item) => item.strictEquals(graphic).toDart);
+    if (index < 0) return null;
+    graphic['layer'] = null;
+    return _graphics.removeAt(index);
+  }
+}
+
+/// The `graphics` of a [FakeGraphicsLayer].
+@JSExport()
+class FakeGraphicCollection {
+  FakeGraphicCollection(this._layer);
+
+  final FakeGraphicsLayer _layer;
+
+  int toArrayCount = 0;
+
+  late final JsCollection<JsGraphic> js =
+      createJSInteropWrapper(this) as JsCollection<JsGraphic>;
+
+  int get length => _layer._graphics.length;
+
+  /// A copy, as ArcGIS returns.
+  JSArray<JsGraphic> toArray() {
+    toArrayCount++;
+    return [..._layer._graphics].toJS;
+  }
+}
+
 /// A vector tile layer that has the style layers [styleLayerIds].
 ///
 /// Like a real one it refuses `setStyleLayerVisibility` until it has loaded.
@@ -395,10 +497,10 @@ List<FakeVectorTileLayer> installFakeVectorTileLayers() {
 
 /// Puts a fake `esri.layers.GraphicsLayer` constructor on the page for the
 /// rest of the test. The layers it constructs join the returned list.
-List<FakeLayer> installFakeGraphicsLayers() {
-  final constructed = <FakeLayer>[];
+List<FakeGraphicsLayer> installFakeGraphicsLayers() {
+  final constructed = <FakeGraphicsLayer>[];
   JsLayer construct(JSObject properties) {
-    final layer = FakeLayer(id: (properties['id']! as JSString).toDart);
+    final layer = FakeGraphicsLayer(id: (properties['id']! as JSString).toDart);
     constructed.add(layer);
     return layer.js;
   }
@@ -424,15 +526,36 @@ List<FakeLayer> installFakeSceneLayers() {
   return constructed;
 }
 
+/// Puts a fake `esri.Graphic` constructor on the page for the rest of the
+/// test. The graphic it constructs is a plain object with the properties it
+/// was given, and in no layer.
+void installFakeGraphics() {
+  JSObject construct(JSObject properties) {
+    properties['layer'] = null;
+    return properties;
+  }
+
+  _installOnEsri('Graphic', construct.toJS);
+}
+
 /// Makes `esri.layers.<name>` the only layer constructor on the page for the
 /// rest of the test.
 void _installLayerConstructor(String name, JSFunction constructor) {
-  final previous = globalContext['esri'];
-  addTearDown(() => globalContext['esri'] = previous);
-
   final layers = JSObject();
   layers[name] = constructor;
+  _installOnEsri('layers', layers);
+}
+
+/// Makes [value] `esri.<name>` on the page for the rest of the test, beside
+/// the other fakes installed on `esri`.
+void _installOnEsri(String name, JSAny value) {
+  final previous = globalContext['esri'] as JSObject?;
+  addTearDown(() => globalContext['esri'] = previous);
+
   final esri = JSObject();
-  esri['layers'] = layers;
+  for (final member in ['Graphic', 'layers']) {
+    if (previous?[member] case final fake?) esri[member] = fake;
+  }
+  esri[name] = value;
   globalContext['esri'] = esri;
 }
