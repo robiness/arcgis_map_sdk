@@ -5,6 +5,7 @@ import 'dart:js_interop';
 
 import 'package:arcgis_map_sdk_platform_interface/arcgis_map_sdk_platform_interface.dart';
 import 'package:arcgis_map_sdk_web/js_interop/interop.dart';
+import 'package:arcgis_map_sdk_web/src/layer_graphics.dart';
 import 'package:arcgis_map_sdk_web/src/model_extension.dart';
 import 'package:arcgis_map_sdk_web/src/mouse_cursor_css.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +20,9 @@ class WebLayerController {
 
   // Layer tracking
   final Map<String, JSObject> _layers = {};
-  final List<Graphic> _graphicsInView = [];
+
+  /// The graphics of each graphics layer by layer id, found by graphic id.
+  final Map<String, LayerGraphics> _layerGraphics = {};
 
   // SceneLayers deferred while in 2D mode (MapView can't handle them at all)
   final List<JsSceneLayer> _deferredSceneLayers = [];
@@ -277,47 +280,66 @@ class WebLayerController {
     required Graphic graphic,
     required JSObject view,
   }) async {
-    // Get the layer from the map, falling back to the cached reference.
-    final map = (view as JsView).map;
-    final layer = map.findLayerById(layerId) ?? _layers[layerId];
+    final layer = _layerToAddTo(view, layerId);
+    final added = _toJsGraphic(graphic);
+    if (layer.graphics case final graphics?) {
+      _graphicsOf(layerId, graphics).add(added);
+    } else {
+      await _addFeatures(layer.features!, [added.graphic]);
+    }
+  }
+
+  /// Adds [graphics] to the layer [layerId] in one call, in their order.
+  Future<void> addGraphics({
+    required String layerId,
+    required Iterable<Graphic> graphics,
+    required JSObject view,
+  }) async {
+    final layer = _layerToAddTo(view, layerId);
+    final added = [for (final graphic in graphics) _toJsGraphic(graphic)];
+    if (layer.graphics case final graphicsLayer?) {
+      _graphicsOf(layerId, graphicsLayer).addMany(added);
+    } else if (added.isNotEmpty) {
+      await _addFeatures(layer.features!, [for (final a in added) a.graphic]);
+    }
+  }
+
+  /// The graphics or feature layer [layerId] of the map, falling back to the
+  /// cached reference.
+  ({JsGraphicsLayer? graphics, JsFeatureLayer? features}) _layerToAddTo(
+    JSObject view,
+    String layerId,
+  ) {
+    final layer =
+        (view as JsView).map.findLayerById(layerId) ?? _layers[layerId];
     if (layer == null) {
       throw Exception('Layer with id $layerId not found');
     }
+    return switch ((layer as JsLayer).type) {
+      'graphics' => (graphics: layer as JsGraphicsLayer, features: null),
+      'feature' => (graphics: null, features: layer as JsFeatureLayer),
+      _ => throw Exception(
+          'Layer $layerId is neither a GraphicsLayer nor a FeatureLayer'),
+    };
+  }
 
-    // Check layer type and handle accordingly
-    final jsLayer = layer as JsLayer;
-    final layerType = jsLayer.type;
+  /// [graphic] as ArcGIS takes it, with the id from its attributes.
+  static IdentifiedGraphic _toJsGraphic(Graphic graphic) {
+    final json = graphic.toJson();
+    final id = (json['attributes'] as Map?)?['id'];
+    return (
+      graphic: JsGraphic(json.jsify()! as JSObject),
+      id: id is String ? id : null,
+    );
+  }
 
-    JsGraphicsLayer? graphicsLayer;
-    JsFeatureLayer? featureLayer;
-
-    if (layerType == 'graphics') {
-      graphicsLayer = layer as JsGraphicsLayer;
-    } else if (layerType == 'feature') {
-      featureLayer = layer as JsFeatureLayer;
-    }
-
-    // Convert Dart graphic to JS graphic
-    final graphicData = graphic.toJson().jsify()! as JSObject;
-    final jsGraphic = JsGraphic(graphicData);
-
-    if (graphicsLayer != null) {
-      // Handle GraphicsLayer - add directly (cast enhanced graphic to expected type)
-      graphicsLayer.add((jsGraphic as JSObject) as JsGraphic);
-    } else if (featureLayer != null) {
-      // Handle FeatureLayer - use applyEdits
-      final edits = {
-        'addFeatures': [jsGraphic]
-      }.jsify()! as JSObject;
-
-      await featureLayer.applyEdits(edits).toDart;
-    } else {
-      throw Exception(
-          'Layer $layerId is neither a GraphicsLayer nor a FeatureLayer');
-    }
-
-    // Track for visibility calculations
-    _graphicsInView.add(graphic);
+  static Future<void> _addFeatures(
+    JsFeatureLayer layer,
+    List<JsGraphic> features,
+  ) async {
+    await layer
+        .applyEdits({'addFeatures': features}.jsify()! as JSObject)
+        .toDart;
   }
 
   Future<void> removeGraphic({
@@ -325,38 +347,38 @@ class WebLayerController {
     required String objectId,
     required JSObject view,
   }) async {
-    // Get the layer from the map instead of cached reference
-    final map = (view as JsView).map;
-    final layer = map.findLayerById(layerId);
+    _graphicsIn(view, layerId).remove(objectId);
+  }
 
+  /// Removes from the graphics layer [layerId] the graphics with
+  /// [graphicIds] in one call. Ids the layer lacks are skipped.
+  void removeGraphicsById({
+    required String layerId,
+    required Iterable<String> graphicIds,
+    required JSObject view,
+  }) {
+    _graphicsIn(view, layerId).removeMany(graphicIds);
+  }
+
+  /// The graphics of the graphics layer [layerId] of the map.
+  LayerGraphics _graphicsIn(JSObject view, String layerId) {
+    final layer = (view as JsView).map.findLayerById(layerId);
     if (layer == null) {
       throw Exception('Layer with id $layerId not found');
     }
-
-    // Cast to layer and check type
-    final jsLayer = layer as JsLayer;
-    final layerType = jsLayer.type;
+    final layerType = (layer as JsLayer).type;
     if (layerType != 'graphics') {
       throw Exception(
           'Layer $layerId is not a graphics layer (type: $layerType)');
     }
-    final graphicsLayer = layer as JsGraphicsLayer;
-
-    // Find and remove the graphic with matching ID
-    final graphics = graphicsLayer.graphics;
-    graphics.forEach((JSAny? item) {
-      final g = item! as JsGraphic;
-      final attrs = g.attributes;
-      final id = (attrs == null) ? null : (attrs['id'] as JSString?);
-      if (id != null && id.toDart == objectId) {
-        graphicsLayer.remove((g as JSObject) as JsGraphic);
-      }
-    }.toJS);
-
-    // Remove from tracking
-    _graphicsInView.removeWhere((g) => g.getAttributesId() == objectId);
+    return _graphicsOf(layerId, layer as JsGraphicsLayer);
   }
 
+  /// Removes from the graphics layer [layerId], or from every graphics layer
+  /// of the map where it is null, the graphics whose attributes hold
+  /// [removeByAttributeValue] under [removeByAttributeKey], or all graphics
+  /// with attributes where either is null. Graphics that hold one of
+  /// [excludeAttributeValues] under [excludeAttributeKey] stay.
   void removeGraphics({
     String? layerId,
     String? removeByAttributeKey,
@@ -365,35 +387,44 @@ class WebLayerController {
     List<String>? excludeAttributeValues,
     required JSObject view,
   }) {
-    if (layerId != null) {
-      // Get the layer from the map instead of cached reference
-      final map = (view as JsView).map;
-      final layer = map.findLayerById(layerId);
+    final map = (view as JsView).map;
+    final layers = layerId == null
+        ? map.layers.toArray().toDart
+        : [if (map.findLayerById(layerId) case final layer?) layer as JsLayer];
+    final match = switch ((removeByAttributeKey, removeByAttributeValue)) {
+      (final key?, final value?) => (key: key, value: value),
+      _ => null,
+    };
+    final exclusion = switch ((excludeAttributeKey, excludeAttributeValues)) {
+      (final key?, final values?) => (key: key, values: values.toSet()),
+      _ => null,
+    };
 
-      if (layer != null) {
-        // Cast to layer type for access to properties
-        final jsLayer = layer as JsLayer;
-        if (jsLayer.type == 'graphics') {
-          final graphicsLayer = layer as JsGraphicsLayer;
-          // For simplicity, remove all graphics if no specific criteria
-          if (removeByAttributeKey == null) {
-            graphicsLayer.removeAll();
-            _graphicsInView.clear();
-          }
-        }
-        // Full implementation would filter by attributes
+    bool removes(JSObject attributes) {
+      if (match != null &&
+          stringAttribute(attributes, match.key) != match.value) {
+        return false;
       }
-    } else {
-      // Remove from all graphics layers
-      for (final layer in _layers.values) {
-        final jsLayer = layer as JsLayer;
-        if (jsLayer.type == 'graphics') {
-          final graphicsLayer = layer as JsGraphicsLayer;
-          graphicsLayer.removeAll();
-        }
-      }
-      _graphicsInView.clear();
+      return exclusion == null ||
+          !exclusion.values
+              .contains(stringAttribute(attributes, exclusion.key));
     }
+
+    for (final layer in layers) {
+      if (layer.type == 'graphics') {
+        _graphicsOf(layer.id, layer as JsGraphicsLayer).removeWhere(removes);
+      }
+    }
+  }
+
+  /// The graphics of [layer], the layer [layerId], indexed anew where it has
+  /// taken the id of another layer.
+  LayerGraphics _graphicsOf(String layerId, JsGraphicsLayer layer) {
+    final graphics = _layerGraphics[layerId];
+    if (graphics != null && graphics.layer.strictEquals(layer).toDart) {
+      return graphics;
+    }
+    return _layerGraphics[layerId] = LayerGraphics(layer);
   }
 
   // Camera and View Operations
@@ -570,16 +601,8 @@ class WebLayerController {
   }) {
     final layer = _layers[layerId] as JsGraphicsLayer?;
     if (layer == null || layer.type != 'graphics') return;
-    bool updated = false;
-    layer.graphics.forEach((JSAny? item) {
-      final g = item! as JsGraphic;
-      final attrs = g.attributes;
-      final id = (attrs == null) ? null : (attrs['id'] as JSString?);
-      if (!updated && id != null && id.toDart == graphicId) {
-        g.symbol = symbol.toJson().jsify()! as JSObject;
-        updated = true;
-      }
-    }.toJS);
+    _graphicsOf(layerId, layer).find(graphicId)?.symbol =
+        symbol.toJson().jsify()! as JSObject;
   }
 
   Future<void> updateFeatureLayer({
@@ -611,6 +634,7 @@ class WebLayerController {
 
       // Remove from tracking
       _layers.remove(layerId);
+      _layerGraphics.remove(layerId);
 
       return true;
     } catch (e, stack) {
@@ -763,19 +787,6 @@ class WebLayerController {
     }
   }
 
-  List<Graphic> getGraphicsInView(JSObject view) {
-    // Return cached graphics for performance
-    return _graphicsInView;
-  }
-
-  List<String> getVisibleGraphicIds(JSObject view) {
-    // Extract IDs from visible graphics
-    return _graphicsInView
-        .map((g) => g.getAttributesId())
-        .where((id) => id.isNotEmpty)
-        .toList();
-  }
-
   Future<void> updateIsAttributionTextVisible({
     required bool isAttributionTextVisible,
     required JSObject view,
@@ -787,6 +798,6 @@ class WebLayerController {
   void dispose() {
     _layers.clear();
     _vectorTileLoads.clear();
-    _graphicsInView.clear();
+    _layerGraphics.clear();
   }
 }

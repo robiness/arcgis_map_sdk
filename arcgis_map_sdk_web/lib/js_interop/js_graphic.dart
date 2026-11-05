@@ -18,6 +18,9 @@ extension type JsGraphic._(JSObject _) implements JSObject {
   external set attributes(JSObject? value);
   external JSObject? get symbol;
   external set symbol(JSObject? value);
+
+  /// The graphics layer the graphic is in, or null.
+  external JSObject? get layer;
   external JSObject? get popupTemplate;
   external set popupTemplate(JSObject? value);
   external JsGraphic clone();
