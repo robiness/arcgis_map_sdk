@@ -121,10 +121,10 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
   List<String> _ids(String prefix, int count) =>
       [for (var i = 0; i < count; i++) '$prefix$i'];
 
-  /// [count] ids of the base layer, spread over it as the graphics are that
-  /// leave a map's view.
-  List<String> _spreadIds(int count) =>
-      (_ids('g', _base)..shuffle(Random(7))).take(count).toList();
+  /// [count] ids of a layer of [of] graphics, spread over it as the graphics
+  /// are that leave a map's view.
+  List<String> _spreadIds(int count, {int of = _base}) =>
+      (_ids('g', of)..shuffle(Random(7))).take(count).toList();
 
   Future<void> _reset({int count = _base}) async {
     _map.removeGraphics(layerId: _layerId);
@@ -180,6 +180,10 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
 
   Future<void> _run() async {
     _log('base layer: $_base graphics, $_reps reps, median');
+    // Built before the clock starts, so only the plugin calls are timed.
+    final spread700 = _spreadIds(700);
+    final spread1000 = _spreadIds(1000);
+    final zoomIn = _spreadIds(2635, of: 3200);
 
     await _measure(
       'add 2000, one call each',
@@ -197,7 +201,7 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
         for (final id in _ids('h', 1200)) {
           _map.addGraphic(layerId: _layerId, graphic: _graphic(id));
         }
-        for (final id in _spreadIds(700)) {
+        for (final id in spread700) {
           _map.removeGraphic(layerId: _layerId, objectId: id);
         }
       },
@@ -206,7 +210,7 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
       'remove 1000, one call each',
       setUp: _reset,
       run: () {
-        for (final id in _spreadIds(1000)) {
+        for (final id in spread1000) {
           _map.removeGraphic(layerId: _layerId, objectId: id);
         }
       },
@@ -219,7 +223,7 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
         removeByAttributeKey: 'family',
         removeByAttributeValue: 'pin',
         excludeAttributeKey: 'id',
-        excludeAttributeValues: _spreadIds(1000),
+        excludeAttributeValues: spread1000,
       ),
     );
     await _measure(
@@ -241,6 +245,15 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
       },
     );
     await _measure(
+      'zoom in: remove 2635 of 3200, one call each',
+      setUp: () => _reset(count: 3200),
+      run: () {
+        for (final id in zoomIn) {
+          _map.removeGraphic(layerId: _layerId, objectId: id);
+        }
+      },
+    );
+    await _measure(
       'add 2000, one addGraphics',
       setUp: () => _reset(count: 0),
       run: () => _map.addGraphics(
@@ -256,14 +269,19 @@ class _GraphicsBenchmarkPageState extends State<GraphicsBenchmarkPage> {
           layerId: _layerId,
           graphics: [for (final id in _ids('h', 1200)) _graphic(id)],
         );
-        _map.removeGraphicsById(layerId: _layerId, graphicIds: _spreadIds(700));
+        _map.removeGraphicsById(layerId: _layerId, graphicIds: spread700);
       },
     );
     await _measure(
       'remove 1000, one removeGraphicsById',
       setUp: _reset,
-      run: () => _map.removeGraphicsById(
-          layerId: _layerId, graphicIds: _spreadIds(1000)),
+      run: () =>
+          _map.removeGraphicsById(layerId: _layerId, graphicIds: spread1000),
+    );
+    await _measure(
+      'zoom in: remove 2635 of 3200, one removeGraphicsById',
+      setUp: () => _reset(count: 3200),
+      run: () => _map.removeGraphicsById(layerId: _layerId, graphicIds: zoomIn),
     );
 
     globalContext['benchResults'] = jsonEncode(_results).toJS;
